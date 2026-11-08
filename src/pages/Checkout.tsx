@@ -98,6 +98,12 @@ const Checkout = () => {
     let separateOutsideTotal = 0;
     let hasBaseProducts = false;
 
+    // Create a map from productId to its cart item quantity
+    const quantityByProductId: Record<string, number> = {};
+    items.forEach((item) => {
+      quantityByProductId[item.id] = (quantityByProductId[item.id] || 0) + (Number(item.quantity) || 1);
+    });
+
     cartProducts.forEach((p) => {
       let currIn = Number(globalInside);
       let currOut = Number(globalOutside);
@@ -107,11 +113,14 @@ const Checkout = () => {
       }
 
       const isSeparate = p.is_separate_delivery === true || p.is_separate_delivery === 1 || p.is_separate_delivery === "1";
+      const qty = quantityByProductId[p.id] || 1;
 
       if (isSeparate) {
-        separateInsideTotal += currIn;
-        separateOutsideTotal += currOut;
+        // When separate delivery is enabled, delivery charge multiplies by product quantity (e.g. 3 * 2 = 6)
+        separateInsideTotal += currIn * qty;
+        separateOutsideTotal += currOut * qty;
       } else {
+        // When separate delivery is off, base delivery charge applies once (e.g. 3) regardless of quantity
         hasBaseProducts = true;
         if (currIn > maxBaseInside) maxBaseInside = currIn;
         if (currOut > maxBaseOutside) maxBaseOutside = currOut;
