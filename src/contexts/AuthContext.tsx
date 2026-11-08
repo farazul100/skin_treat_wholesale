@@ -20,9 +20,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const checkAdmin = async (userId: string) => {
-    // Force admin role since we are using a mock auth client for now
-    setIsAdmin(true);
+  const checkAdmin = async (userId: string, currentUser?: any) => {
+    const role = currentUser?.role || (session?.user as any)?.role || (user as any)?.role;
+    setIsAdmin(role === "admin");
   };
 
   useEffect(() => {
@@ -33,13 +33,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer Supabase call to avoid deadlock inside the callback
-        setTimeout(() => checkAdmin(session.user.id), 0);
+        setIsAdmin((session.user as any)?.role === "admin");
       } else {
         setIsAdmin(false);
       }
-      // Don't flip loading here during initial load — let getSession() control it
-      // to avoid showing logged-out UI before checkAdmin() resolves
       if (initialized) setLoading(false);
     });
 
@@ -48,8 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Await admin check BEFORE flipping loading to false
-        await checkAdmin(session.user.id);
+        setIsAdmin((session.user as any)?.role === "admin");
       } else {
         setIsAdmin(false);
       }
@@ -76,6 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setIsAdmin(false);
   };
 
   return (

@@ -155,6 +155,48 @@ async function ensurePaymentColumns() {
 }
 ensurePaymentColumns();
 
+// Auto-ensure admin_users and admin_sessions tables exist
+async function ensureAdminAuthTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id VARCHAR(64) PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        token VARCHAR(128) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'admin',
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Admin auth tables ensured");
+
+    const [rows] = await pool.query('SELECT COUNT(*) as count FROM admin_users');
+    if (rows[0].count === 0) {
+      const defaultId = crypto.randomUUID();
+      const defaultEmail = 'admin@naturalshefa.com';
+      const defaultHash = crypto.createHash('sha256').update('admin123').digest('hex');
+      await pool.query(
+        'INSERT INTO admin_users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
+        [defaultId, defaultEmail, defaultHash, 'admin']
+      );
+      console.log('Default admin user created: admin@naturalshefa.com / admin123');
+    }
+  } catch (err) {
+    console.log("Note on admin auth tables:", err.message);
+  }
+}
+ensureAdminAuthTables();
+
 function buildWhereClause(query, table = '', alias = '') {
   let whereParts = [];
   let values = [];
@@ -279,11 +321,125 @@ app.get('/api/debug_info', (req, res) => {
   });
 });
 
+// ==========================================
+// ADMIN AUTHENTICATION ROUTES
+// ==========================================
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'ইমেইল এবং পাসওয়ার্ড প্রদান করুন' });
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    const hash = crypto.createHash('sha256').update(String(password)).digest('hex');
+
+    const [users] = await pool.query(
+      'SELECT id, email, role FROM admin_users WHERE LOWER(email) = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
+      [cleanEmail, hash, String(password)]
+    );
+
+    if (!users || users.length === 0) {
+      return res.status(401).json({ error: 'ভুল ইমেইল বা পাসওয়ার্ড' });
+    }
+
+    const admin = users[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      'INSERT INTO admin_sessions (token, user_id, email, role, expires_at) VALUES (?, ?, ?, ?, ?)',
+      [token, admin.id, admin.email, admin.role || 'admin', expiresAt]
+    );
+
+    res.json({
+      user: { id: admin.id, email: admin.email, role: admin.role || 'admin' },
+      token
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/auth/session', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT token, user_id, email, role FROM admin_sessions WHERE token = ? AND expires_at > NOW()',
+      [token]
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const s = rows[0];
+    res.json({
+      user: { id: s.user_id, email: s.email, role: s.role || 'admin' }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (token) {
+      await pool.query('DELETE FROM admin_sessions WHERE token = ?', [token]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'অননুমোদিত অ্যাক্সেস' });
+
+    const [rows] = await pool.query(
+      'SELECT user_id, email FROM admin_sessions WHERE token = ? AND expires_at > NOW()',
+      [token]
+    );
+    if (!rows || rows.length === 0) return res.status(401).json({ error: 'সেশন মেয়াদোত্তীর্ণ বা অবৈধ' });
+
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' });
+    }
+
+    const currentHash = crypto.createHash('sha256').update(String(currentPassword)).digest('hex');
+    const [userRows] = await pool.query(
+      'SELECT id FROM admin_users WHERE id = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
+      [rows[0].user_id, currentHash, String(currentPassword)]
+    );
+    if (!userRows || userRows.length === 0) {
+      return res.status(400).json({ error: 'বর্তমান পাসওয়ার্ড সঠিক নয়' });
+    }
+
+    const newHash = crypto.createHash('sha256').update(String(newPassword)).digest('hex');
+    await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [newHash, rows[0].user_id]);
+
+    res.json({ success: true, message: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Generic GET Route
 app.get('/api/:table', async (req, res, next) => {
   const { table } = req.params;
   // Ignore specific routes already handled above
-  if (['products', 'categories', 'rpc', 'eps'].includes(table)) return next();
+  if (['products', 'categories', 'rpc', 'eps', 'auth'].includes(table)) return next();
   
   const { whereClause, values } = buildWhereClause(req.query, table);
   let orderClause = '';
@@ -668,7 +824,7 @@ app.get('/api/debug_uploads', (req, res) => {
 // Generic POST Route
 app.post('/api/:table', async (req, res, next) => {
   const { table } = req.params;
-  if (table === 'rpc' || table === 'eps') return next();
+  if (table === 'rpc' || table === 'eps' || table === 'auth') return next();
   
   const data = req.body;
   if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: "No data" });

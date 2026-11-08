@@ -83,6 +83,8 @@ class QueryBuilder {
   }
 }
 
+let authListeners: Array<(event: string, session: any) => void> = [];
+
 export const supabase = {
   from: (table: string) => new QueryBuilder(table),
   rpc: async (func: string, args: any) => {
@@ -99,15 +101,104 @@ export const supabase = {
     }
   },
   auth: {
-    getUser: async () => ({ data: { user: { id: "admin-user" } }, error: null }),
+    getUser: async () => {
+      const token = localStorage.getItem("admin_token");
+      if (!token) return { data: { user: null }, error: null };
+      try {
+        const res = await fetch(`${API_URL}/auth/session`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          localStorage.removeItem("admin_token");
+          return { data: { user: null }, error: null };
+        }
+        const data = await res.json();
+        return { data: { user: data.user }, error: null };
+      } catch {
+        return { data: { user: null }, error: null };
+      }
+    },
     updateUser: async () => ({ data: {}, error: null }),
-    signOut: async () => ({ error: null }),
-    signInWithPassword: async () => ({ data: { user: { id: "admin-user" } }, error: null }),
-    getSession: async () => ({ data: { session: { user: { id: "admin-user" } } }, error: null }),
+    signOut: async () => {
+      const token = localStorage.getItem("admin_token");
+      if (token) {
+        try {
+          await fetch(`${API_URL}/auth/logout`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch {}
+        localStorage.removeItem("admin_token");
+      }
+      authListeners.forEach(cb => cb('SIGNED_OUT', null));
+      return { error: null };
+    },
+    signInWithPassword: async ({ email, password }: any) => {
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          return { data: null, error: new Error(data.error || "লগইন ব্যর্থ হয়েছে") };
+        }
+        localStorage.setItem("admin_token", data.token);
+        const session = { user: data.user, access_token: data.token };
+        authListeners.forEach(cb => cb('SIGNED_IN', session));
+        return { data: { user: data.user, session }, error: null };
+      } catch (err: any) {
+        return { data: null, error: err };
+      }
+    },
+    getSession: async () => {
+      const token = localStorage.getItem("admin_token");
+      if (!token) return { data: { session: null }, error: null };
+      try {
+        const res = await fetch(`${API_URL}/auth/session`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          localStorage.removeItem("admin_token");
+          return { data: { session: null }, error: null };
+        }
+        const data = await res.json();
+        const session = { user: data.user, access_token: token };
+        return { data: { session }, error: null };
+      } catch {
+        return { data: { session: null }, error: null };
+      }
+    },
     onAuthStateChange: (callback: any) => {
-      // immediately call the callback with a signed in session
-      setTimeout(() => callback('SIGNED_IN', { user: { id: 'admin-user' } }), 0);
-      return { data: { subscription: { unsubscribe: () => {} } } };
+      authListeners.push(callback);
+      const token = localStorage.getItem("admin_token");
+      if (token) {
+        fetch(`${API_URL}/auth/session`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(async res => {
+          if (res.ok) {
+            const data = await res.json();
+            callback('SIGNED_IN', { user: data.user, access_token: token });
+          } else {
+            localStorage.removeItem("admin_token");
+            callback('SIGNED_OUT', null);
+          }
+        }).catch(() => {
+          callback('SIGNED_OUT', null);
+        });
+      } else {
+        setTimeout(() => callback('SIGNED_OUT', null), 0);
+      }
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              authListeners = authListeners.filter(cb => cb !== callback);
+            }
+          }
+        }
+      };
     }
   },
   functions: {

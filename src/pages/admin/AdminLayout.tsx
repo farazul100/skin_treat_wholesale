@@ -1,7 +1,7 @@
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link, Outlet, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, ShoppingCart, Users, Settings, ArrowLeft, FolderOpen, AlertTriangle, Code2, Image, FileText, BookOpen, Star, Youtube } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Settings, ArrowLeft, FolderOpen, AlertTriangle, Code2, Image, FileText, BookOpen, Star, Youtube, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,7 +56,7 @@ const baseNavItems = [
 ];
 
 const AdminLayout = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const categoriesEnabled = useCategoriesEnabled();
   const navItems = baseNavItems.filter((i: any) => !i.requiresCategories || categoriesEnabled);
@@ -93,10 +93,16 @@ const AdminLayout = () => {
             </Link>
           ))}
         </nav>
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-1">
           <Link to="/" className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-primary">
             <ArrowLeft className="h-4 w-4" /> স্টোরে ফিরে যান
           </Link>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" /> লগআউট
+          </button>
         </div>
       </aside>
 
@@ -110,6 +116,13 @@ const AdminLayout = () => {
             {item.label}
           </Link>
         ))}
+        <button
+          onClick={() => signOut()}
+          className="flex flex-col items-center gap-0.5 text-xs p-1 shrink-0 text-destructive cursor-pointer"
+        >
+          <LogOut className="h-5 w-5" />
+          লগআউট
+        </button>
       </div>
 
       {/* Content - offset for fixed sidebar */}

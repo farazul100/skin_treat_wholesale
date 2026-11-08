@@ -60,6 +60,94 @@ const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMuta
   );
 };
 
+const ChangeAdminPassword = () => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error("নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("নতুন পাসওয়ার্ড দুটি মিলছে না");
+      return;
+    }
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে");
+      }
+      toast.success(data.message || "পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border rounded-xl p-5">
+      <h3 className="font-bold text-foreground mb-1">অ্যাডমিন পাসওয়ার্ড পরিবর্তন</h3>
+      <p className="text-sm text-muted-foreground mb-4">প্যানেলের নিরাপত্তা নিশ্চিত করতে শক্তিশালী পাসওয়ার্ড ব্যবহার করুন</p>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <Label>বর্তমান পাসওয়ার্ড</Label>
+          <Input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="বর্তমান পাসওয়ার্ড দিন"
+            required
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label>নতুন পাসওয়ার্ড</Label>
+          <Input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="কমপক্ষে ৬ অক্ষরের নতুন পাসওয়ার্ড"
+            required
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label>নতুন পাসওয়ার্ড নিশ্চিত করুন</Label>
+          <Input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="নতুন পাসওয়ার্ডটি পুনরায় লিখুন"
+            required
+            className="mt-1"
+          />
+        </div>
+        <Button type="submit" variant="outline" className="mt-2" disabled={loading}>
+          {loading ? "পরিবর্তন হচ্ছে..." : "পাসওয়ার্ড আপডেট করুন"}
+        </Button>
+      </form>
+    </div>
+  );
+};
+
 const MetaCatalogFeedCard = () => {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "rogjosgrwrlblpslmocr";
   const base = `https://${projectId}.supabase.co/functions/v1/meta-catalog-feed`;
@@ -434,6 +522,9 @@ const AdminSettings = () => {
               সেভ করুন
             </Button>
           </div>
+
+          {/* Admin Password Change */}
+          <ChangeAdminPassword />
 
           {/* Cloudinary */}
           <div className="bg-card border rounded-xl p-5">
