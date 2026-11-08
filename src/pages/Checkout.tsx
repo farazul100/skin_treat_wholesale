@@ -222,7 +222,7 @@ const Checkout = () => {
     setLoading(true);
     try {
       const { data: order, error } = await supabase.from("orders").insert({
-        user_id: user?.id || null,
+        user_id: user?.id && user.id !== "admin-user" ? user.id : null,
         customer_name: cleanName,
         customer_phone: cleanPhone,
         shipping_address: cleanAddress,

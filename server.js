@@ -148,6 +148,9 @@ async function ensurePaymentColumns() {
   try { await pool.query('ALTER TABLE products ADD COLUMN delivery_outside_dhaka DECIMAL(10,2) NULL;'); } catch (e) {}
   try { await pool.query('ALTER TABLE products ADD COLUMN delivery_nationwide DECIMAL(10,2) NULL;'); } catch (e) {}
   try { await pool.query('ALTER TABLE products ADD COLUMN payment_requirement VARCHAR(255) DEFAULT "cod";'); } catch (e) {}
+
+  // Drop orders_ibfk_1 foreign key if present so orders never fail on user_id mismatch
+  try { await pool.query('ALTER TABLE orders DROP FOREIGN KEY orders_ibfk_1;'); } catch (e) {}
 }
 ensurePaymentColumns();
 
@@ -295,6 +298,25 @@ app.get('/api/:table', async (req, res, next) => {
 
   try {
     const [rows] = await pool.query(`SELECT * FROM ?? ${whereClause} ${orderClause} ${limitClause}`, [table, ...values]);
+    if (table === 'orders' && rows.length > 0) {
+      try {
+        const orderIds = rows.map(r => r.id).filter(Boolean);
+        if (orderIds.length > 0) {
+          const placeholders = orderIds.map(() => '?').join(',');
+          const [orderItems] = await pool.query(`SELECT * FROM order_items WHERE order_id IN (${placeholders})`, orderIds);
+          const itemsByOrder = {};
+          orderItems.forEach(it => {
+            if (!itemsByOrder[it.order_id]) itemsByOrder[it.order_id] = [];
+            itemsByOrder[it.order_id].push(it);
+          });
+          rows.forEach(r => {
+            r.order_items = itemsByOrder[r.id] || [];
+          });
+        }
+      } catch (err) {
+        console.warn("Could not load order_items for orders:", err.message);
+      }
+    }
     if (req.query.single) return res.json(rows[0] || null);
     res.json(rows);
   } catch (error) {
@@ -663,6 +685,42 @@ app.post('/api/:table', async (req, res, next) => {
         if (item.value !== undefined) {
           item.setting_value = item.value;
           delete item.value;
+        }
+      }
+
+      // Handle orders insertion safely
+      if (table === 'orders') {
+        if (!item.order_number) {
+          const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+          const rand = Math.floor(1000 + Math.random() * 9000);
+          item.order_number = `NS-${dateStr}-${rand}`;
+        }
+        // Sanitize user_id: if empty or 'admin-user' or not existing in users, set to null
+        if (!item.user_id || item.user_id === 'admin-user' || String(item.user_id).trim() === '') {
+          item.user_id = null;
+        } else {
+          try {
+            const [userRows] = await pool.query('SELECT id FROM users WHERE id = ?', [item.user_id]);
+            if (!userRows || userRows.length === 0) {
+              item.user_id = null;
+            }
+          } catch (e) {
+            item.user_id = null;
+          }
+        }
+      }
+
+      // Handle order_items insertion safely
+      if (table === 'order_items') {
+        if (item.product_id) {
+          try {
+            const [prodRows] = await pool.query('SELECT id FROM products WHERE id = ?', [item.product_id]);
+            if (!prodRows || prodRows.length === 0) {
+              item.product_id = null;
+            }
+          } catch (e) {
+            // Keep product_id if query fails
+          }
         }
       }
       const keys = Object.keys(item);
