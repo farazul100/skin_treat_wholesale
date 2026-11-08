@@ -17,6 +17,7 @@ const emptyProduct = {
   sku: "", stock: 0, images: [] as string[], badge: "", is_featured: false, is_bestseller: false, is_active: true, category_id: null as string | null,
   meta_title: "", meta_description: "", focus_keyword: "", video_url: "", video_thumbnail: "", sort_order: 0,
   delivery_type: "global", delivery_inside_dhaka: null as number | null, delivery_outside_dhaka: null as number | null, delivery_nationwide: null as number | null,
+  is_separate_delivery: false as boolean,
   payment_requirement: "cod" as string,
   landing_page_html: "",
 };
@@ -245,6 +246,7 @@ const AdminProducts = () => {
       delivery_inside_dhaka: product.delivery_inside_dhaka,
       delivery_outside_dhaka: product.delivery_outside_dhaka,
       delivery_nationwide: product.delivery_nationwide,
+      is_separate_delivery: product.is_separate_delivery === true || product.is_separate_delivery === 1 || product.is_separate_delivery === "1",
       payment_requirement: product.payment_requirement || "cod",
       landing_page_html: product.landing_page_html || "",
     });
@@ -265,6 +267,7 @@ const AdminProducts = () => {
       delivery_inside_dhaka: product.delivery_inside_dhaka,
       delivery_outside_dhaka: product.delivery_outside_dhaka,
       delivery_nationwide: product.delivery_nationwide,
+      is_separate_delivery: product.is_separate_delivery === true || product.is_separate_delivery === 1 || product.is_separate_delivery === "1",
       payment_requirement: product.payment_requirement || "cod",
       landing_page_html: product.landing_page_html || "",
     });
@@ -831,6 +834,25 @@ const AdminProducts = () => {
                       </div>
                     </div>
                   )}
+
+                  <div className="pt-2">
+                    <label className="flex items-start gap-3 border p-3.5 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={!!form.is_separate_delivery}
+                        onChange={(e) => setForm({ ...form, is_separate_delivery: e.target.checked })}
+                        className="text-primary rounded h-4 w-4 mt-0.5 cursor-pointer"
+                      />
+                      <div className="space-y-0.5">
+                        <span className="text-sm font-medium text-foreground block">
+                          প্রত্যেক প্রোডাক্ট এর আলাদা ডেলিভারি চার্জ
+                        </span>
+                        <span className="text-xs text-muted-foreground block">
+                          ইনেবল করলে কার্টে অন্য পণ্য থাকলেও এই পণ্যের ডেলিভারি চার্জ আলাদাভাবে যোগ/কাউন্ট হবে। অফ রাখলে কার্টের সর্বোচ্চ ডেলিভারি চার্জ প্রযোজ্য হবে।
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </TabsContent>
 

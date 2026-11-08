@@ -79,7 +79,7 @@ const Checkout = () => {
     queryKey: ["cart-products-checkout", items.map(i => i.id).join(",")],
     queryFn: async () => {
       if (items.length === 0) return [];
-      const { data } = await supabase.from("products").select("id, delivery_type, delivery_inside_dhaka, delivery_outside_dhaka, delivery_nationwide, payment_requirement").in("id", items.map(i => i.id));
+      const { data } = await supabase.from("products").select("id, delivery_type, delivery_inside_dhaka, delivery_outside_dhaka, delivery_nationwide, payment_requirement, is_separate_delivery").in("id", items.map(i => i.id));
       return data || [];
     },
     enabled: items.length > 0,
@@ -92,8 +92,12 @@ const Checkout = () => {
   let outsideCharge = Number(globalOutside);
   
   if (cartProducts && cartProducts.length > 0) {
-    insideCharge = 0;
-    outsideCharge = 0;
+    let maxBaseInside = 0;
+    let maxBaseOutside = 0;
+    let separateInsideTotal = 0;
+    let separateOutsideTotal = 0;
+    let hasBaseProducts = false;
+
     cartProducts.forEach((p) => {
       let currIn = Number(globalInside);
       let currOut = Number(globalOutside);
@@ -101,9 +105,21 @@ const Checkout = () => {
         currIn = Number(p.delivery_inside_dhaka ?? globalInside);
         currOut = Number(p.delivery_outside_dhaka ?? p.delivery_nationwide ?? globalOutside);
       }
-      if (currIn > insideCharge) insideCharge = currIn;
-      if (currOut > outsideCharge) outsideCharge = currOut;
+
+      const isSeparate = p.is_separate_delivery === true || p.is_separate_delivery === 1 || p.is_separate_delivery === "1";
+
+      if (isSeparate) {
+        separateInsideTotal += currIn;
+        separateOutsideTotal += currOut;
+      } else {
+        hasBaseProducts = true;
+        if (currIn > maxBaseInside) maxBaseInside = currIn;
+        if (currOut > maxBaseOutside) maxBaseOutside = currOut;
+      }
     });
+
+    insideCharge = separateInsideTotal + (hasBaseProducts ? maxBaseInside : 0);
+    outsideCharge = separateOutsideTotal + (hasBaseProducts ? maxBaseOutside : 0);
   }
 
   const deliveryCharge = city === "dhaka" ? insideCharge : outsideCharge;

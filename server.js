@@ -148,6 +148,7 @@ async function ensurePaymentColumns() {
   try { await pool.query('ALTER TABLE products ADD COLUMN delivery_outside_dhaka DECIMAL(10,2) NULL;'); } catch (e) {}
   try { await pool.query('ALTER TABLE products ADD COLUMN delivery_nationwide DECIMAL(10,2) NULL;'); } catch (e) {}
   try { await pool.query('ALTER TABLE products ADD COLUMN payment_requirement VARCHAR(255) DEFAULT "cod";'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN is_separate_delivery TINYINT(1) DEFAULT 0;'); } catch (e) {}
 
   // Drop orders_ibfk_1 foreign key if present so orders never fail on user_id mismatch
   try { await pool.query('ALTER TABLE orders DROP FOREIGN KEY orders_ibfk_1;'); } catch (e) {}
