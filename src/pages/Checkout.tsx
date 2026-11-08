@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, AlertTriangle, AlertCircle, Loader2 } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const getSessionId = () => {
   let id = sessionStorage.getItem("checkout_session_id");
@@ -134,6 +135,11 @@ const Checkout = () => {
     partialAmount = grandTotal;
   }
 
+  // Advance payment requirement evaluation
+  const requiresAdvance = !canCOD || paymentMethod === "delivery_advance" || paymentMethod === "full_advance";
+  const requiredAdvanceAmount = (paymentMethod === "full_advance" || reqFull) ? grandTotal : deliveryCharge;
+  const advanceTypeLabel = (paymentMethod === "full_advance" || reqFull) ? "সম্পূর্ণ মূল্য" : "ডেলিভারি চার্জ";
+
   useEffect(() => {
     const valid = isPaymentEnabled ? [...allowedMethods, "eps"] : allowedMethods;
     if (!valid.includes(paymentMethod)) {
@@ -213,6 +219,16 @@ const Checkout = () => {
       toast.error("সঠিক মোবাইল নম্বর দিন (১১ সংখ্যা)");
       return;
     }
+
+    // Explicit check: If advance payment is required, but no payment method/gateway is enabled, block order completely
+    if (requiresAdvance && !isPaymentEnabled) {
+      toast.error(
+        `অর্ডার করা সম্ভব নয়: এই পণ্যের শর্ত অনুযায়ী অগ্রিম ${advanceTypeLabel} ৳${requiredAdvanceAmount} পরিশোধ করা বাধ্যতামূলক, কিন্তু টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন বিকাশ/নগদ/EPS) সক্রিয় নেই।`,
+        { duration: 12000 }
+      );
+      return;
+    }
+
     // Facebook Pixel - InitiateCheckout
     window.fbq?.("track", "InitiateCheckout", {
       value: grandTotal,
@@ -289,19 +305,37 @@ const Checkout = () => {
             return;
           } else {
             console.error("EPS initiate error:", payData);
-            toast.error(payData.error || "পেমেন্ট গেটওয়ে সংযোগে সমস্যা, তবে আপনার অর্ডার সফলভাবে সংরক্ষিত হয়েছে।");
+            if (requiresAdvance) {
+              toast.error(
+                `পেমেন্ট সমস্যা: ${payData.error || "পেমেন্ট গেটওয়েতে সংযোগ করা যায়নি"}। এই অর্ডারের জন্য অগ্রিম ${advanceTypeLabel} ৳${requiredAdvanceAmount} পরিশোধ বাধ্যতামূলক, তাই অর্ডারটি সম্পন্ন হয়নি।`,
+                { duration: 12000 }
+              );
+              try { await supabase.from("orders").update({ payment_status: "failed", order_status: "cancelled" }).eq("id", finalOrderId); } catch (e) {}
+              return;
+            } else {
+              toast.error(payData.error || "পেমেন্ট গেটওয়ে সংযোগে সমস্যা, তবে আপনার অর্ডার সফলভাবে সংরক্ষিত হয়েছে।");
+              clearCart();
+              sessionStorage.removeItem("checkout_session_id");
+              navigate(`/order-success/${finalOrderId}?payment=failed`);
+              return;
+            }
+          }
+        } catch (payErr: any) {
+          console.error("EPS initiate error:", payErr);
+          if (requiresAdvance) {
+            toast.error(
+              `পেমেন্ট গেটওয়ে সংযোগে সমস্যা হয়েছে। অগ্রিম ${advanceTypeLabel} ৳${requiredAdvanceAmount} পরিশোধ ছাড়া অর্ডার সম্পন্ন করা সম্ভব নয়।`,
+              { duration: 12000 }
+            );
+            try { await supabase.from("orders").update({ payment_status: "failed", order_status: "cancelled" }).eq("id", finalOrderId); } catch (e) {}
+            return;
+          } else {
+            toast.error("পেমেন্ট গেটওয়েতে সংযোগ সমস্যা");
             clearCart();
             sessionStorage.removeItem("checkout_session_id");
             navigate(`/order-success/${finalOrderId}?payment=failed`);
             return;
           }
-        } catch (payErr: any) {
-          console.error("EPS initiate error:", payErr);
-          toast.error("পেমেন্ট গেটওয়েতে সংযোগ সমস্যা");
-          clearCart();
-          sessionStorage.removeItem("checkout_session_id");
-          navigate(`/order-success/${finalOrderId}?payment=failed`);
-          return;
         }
       }
 
@@ -415,30 +449,70 @@ const Checkout = () => {
                     )}
 
                     {allowedMethods.includes("delivery_advance") && (
-                      <div className="flex items-center gap-3 border rounded-lg p-3">
+                      <div className={cn(
+                        "flex items-center gap-3 border rounded-lg p-3 transition-colors",
+                        !isPaymentEnabled && "border-destructive/40 bg-destructive/5"
+                      )}>
                         <RadioGroupItem value="delivery_advance" id="delivery_advance" />
                         <Label htmlFor="delivery_advance" className="cursor-pointer flex-1">
-                          <span className="text-base font-bold text-foreground">ডেলিভারি চার্জ অ্যাডভান্স করুন</span>
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-base font-bold text-foreground">ডেলিভারি চার্জ অ্যাডভান্স করুন</span>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                              অগ্রিম ৳{deliveryCharge}
+                            </span>
+                          </div>
                           <p className="text-sm text-muted-foreground mt-0.5">
-                            {isPaymentEnabled ? "বিকাশ, নগদ বা রকেটের মাধ্যমে নিরাপদে পেমেন্ট করুন।" : "অর্ডার করার পর আমাদের প্রতিনিধি আপনাকে কল করে পেমেন্ট রিসিভ করবে।"}
+                            {isPaymentEnabled 
+                              ? "বিকাশ, নগদ বা রকেটের মাধ্যমে নিরাপদে ডেলিভারি চার্জ পেমেন্ট করুন।" 
+                              : "⚠️ টাকা নেওয়ার কোনো অনলাইন পেমেন্ট মেথড বা গেটওয়ে সক্রিয় নেই।"}
                           </p>
                         </Label>
                       </div>
                     )}
 
                     {allowedMethods.includes("full_advance") && (
-                      <div className="flex items-center gap-3 border rounded-lg p-3">
+                      <div className={cn(
+                        "flex items-center gap-3 border rounded-lg p-3 transition-colors",
+                        !isPaymentEnabled && "border-destructive/40 bg-destructive/5"
+                      )}>
                         <RadioGroupItem value="full_advance" id="full_advance" />
                         <Label htmlFor="full_advance" className="cursor-pointer flex-1">
-                          <span className="text-base font-bold text-foreground">সম্পূর্ণ টাকা অ্যাডভান্স (প্রিপেইড)</span>
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-base font-bold text-foreground">সম্পূর্ণ টাকা অ্যাডভান্স (প্রিপেইড)</span>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                              অগ্রিম ৳{grandTotal}
+                            </span>
+                          </div>
                           <p className="text-sm text-muted-foreground mt-0.5">
-                            {isPaymentEnabled ? "বিকাশ, নগদ বা রকেটের মাধ্যমে নিরাপদে পেমেন্ট করুন।" : "অর্ডার করার পর আমাদের প্রতিনিধি আপনাকে কল করে পেমেন্ট রিসিভ করবে।"}
+                            {isPaymentEnabled 
+                              ? "বিকাশ, নগদ বা রকেটের মাধ্যমে সম্পূর্ণ টাকা পেমেন্ট করুন।" 
+                              : "⚠️ টাকা নেওয়ার কোনো অনলাইন পেমেন্ট মেথড বা গেটওয়ে সক্রিয় নেই।"}
                           </p>
                         </Label>
                       </div>
                     )}
                     
                   </RadioGroup>
+
+                  {/* Prominent Advance Payment Warning Banner */}
+                  {requiresAdvance && !isPaymentEnabled && (
+                    <div className="bg-destructive/10 border-2 border-destructive/30 rounded-xl p-4 text-destructive space-y-2 mt-4">
+                      <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                        <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
+                        <span>অগ্রিম পেমেন্ট মেথড অনুপস্থিত (অর্ডার সম্ভব নয়)</span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
+                        এই পণ্যের শর্ত অনুযায়ী অগ্রিম <strong className="text-destructive font-bold">{advanceTypeLabel} ৳{requiredAdvanceAmount}</strong> পরিশোধ করা বাধ্যতামূলক। কিন্তু বর্তমানে সাইটে টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন EPS / বিকাশ / নগদ) সক্রিয় করা নেই।
+                      </p>
+                      <div className="bg-background/80 rounded-lg p-2.5 text-xs font-semibold border border-destructive/20 text-destructive flex items-center justify-between">
+                        <span>প্রয়োজনীয় অগ্রিম পরিমাণ:</span>
+                        <span className="text-sm font-bold">৳{requiredAdvanceAmount}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground pt-1">
+                        (অ্যাডমিন প্যানেল &gt; সেটিংস &gt; পেমেন্ট গেটওয়ে চালু করলে গ্রাহক এই ৳{requiredAdvanceAmount} পেমেন্ট করে অর্ডার সম্পন্ন করতে পারবেন।)
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -518,9 +592,32 @@ const Checkout = () => {
                     </div>
                   )}
                 </div>
-                <Button type="submit" className="w-full mt-4" size="lg" disabled={loading}>
-                  {loading ? "প্রসেস হচ্ছে..." : paymentMethod === "eps" ? "অনলাইনে পেমেন্ট করুন" : "অর্ডার কনফার্ম করুন"}
+                <Button 
+                  type="submit" 
+                  className={cn(
+                    "w-full mt-4 text-base font-bold py-6 shadow-md transition-all",
+                    requiresAdvance && !isPaymentEnabled && "bg-destructive hover:bg-destructive/90 text-destructive-foreground cursor-pointer"
+                  )} 
+                  size="lg" 
+                  disabled={loading}
+                >
+                  {loading 
+                    ? "প্রসেস হচ্ছে..." 
+                    : requiresAdvance && !isPaymentEnabled 
+                    ? `অগ্রিম ৳${requiredAdvanceAmount} পেমেন্ট মেথড নেই (অর্ডার বন্ধ)`
+                    : paymentMethod === "eps" 
+                    ? "অনলাইনে পেমেন্ট করুন" 
+                    : paymentMethod === "delivery_advance"
+                    ? `ডেলিভারি চার্জ (৳${deliveryCharge}) দিয়ে অর্ডার করুন`
+                    : paymentMethod === "full_advance"
+                    ? `সম্পূর্ণ টাকা (৳${grandTotal}) দিয়ে অর্ডার করুন`
+                    : "অর্ডার কনফার্ম করুন"}
                 </Button>
+                {requiresAdvance && !isPaymentEnabled && (
+                  <p className="text-xs text-destructive text-center font-medium mt-2">
+                    ⚠️ অগ্রিম ৳{requiredAdvanceAmount} নেওয়ার পেমেন্ট গেটওয়ে সক্রিয় না থাকায় অর্ডার কনফার্ম করা যাবে না।
+                  </p>
+                )}
                 {!user && (
                   <p className="text-xs text-center text-muted-foreground mt-2">
                     একাউন্ট আছে? <Link to="/auth" className="text-primary underline">লগইন করুন</Link>

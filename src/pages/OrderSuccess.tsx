@@ -95,12 +95,12 @@ const OrderSuccess = () => {
           )}
           {paymentParam === "failed" && (
             <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3.5 mb-4 text-amber-800 dark:text-amber-300 text-xs sm:text-sm text-left">
-              অনলাইন পেমেন্ট সম্পন্ন হয়নি। আপনার অর্ডারটি ক্যাশ অন ডেলিভারি (পেন্ডিং) হিসেবে গ্রহণ করা হয়েছে। ডেলিভারির সময় মূল্য পরিশোধ করতে পারবেন।
+              অনলাইন পেমেন্ট সম্পন্ন হয়নি। {order?.payment_method === "cod" ? "আপনার অর্ডারটি ক্যাশ অন ডেলিভারি (পেন্ডিং) হিসেবে গ্রহণ করা হয়েছে। ডেলিভারির সময় মূল্য পরিশোধ করতে পারবেন।" : "অগ্রিম পেমেন্ট প্রক্রিয়া অসম্পূর্ণ রয়েছে।"}
             </div>
           )}
           {paymentParam === "cancelled" && (
             <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3.5 mb-4 text-amber-800 dark:text-amber-300 text-xs sm:text-sm text-left">
-              পেমেন্ট বাতিল করা হয়েছে। আপনার অর্ডারটি ক্যাশ অন ডেলিভারি হিসেবে সংরক্ষিত রয়েছে।
+              পেমেন্ট বাতিল করা হয়েছে। {order?.payment_method === "cod" ? "আপনার অর্ডারটি ক্যাশ অন ডেলিভারি হিসেবে সংরক্ষিত রয়েছে।" : "অগ্রিম পেমেন্ট ছাড়া অর্ডারটি প্রসেস করা হবে না।"}
             </div>
           )}
 
@@ -121,6 +121,10 @@ const OrderSuccess = () => {
                     ? "ক্যাশ অন ডেলিভারি" 
                     : order.payment_method === "eps" 
                     ? "অনলাইন পেমেন্ট (EPS)" 
+                    : order.payment_method === "delivery_advance"
+                    ? "ডেলিভারি চার্জ অ্যাডভান্স"
+                    : order.payment_method === "full_advance"
+                    ? "সম্পূর্ণ টাকা অ্যাডভান্স"
                     : "অনলাইন পেমেন্ট"}
                 </span>
               </div>
