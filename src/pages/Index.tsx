@@ -5,7 +5,6 @@ import CategorySlider from "@/components/CategorySlider";
 import HomeCategorySections from "@/components/HomeCategorySections";
 import TopSellingProducts from "@/components/TopSellingProducts";
 import PromoBanners from "@/components/PromoBanners";
-import AllProducts from "@/components/AllProducts";
 import CustomerReviews from "@/components/CustomerReviews";
 import VideoGallery from "@/components/VideoGallery";
 import KeyPoints from "@/components/KeyPoints";
@@ -22,7 +21,6 @@ const Index = () => {
         <CategorySlider />
         <HomeCategorySections />
         <TopSellingProducts />
-        <AllProducts />
         <PromoBanners />
         <CustomerReviews />
         <VideoGallery />
