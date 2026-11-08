@@ -221,7 +221,9 @@ const Checkout = () => {
     });
     setLoading(true);
     try {
-      const { data: order, error } = await supabase.from("orders").insert({
+      const orderId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const orderPayload: any = {
+        id: orderId,
         user_id: user?.id && user.id !== "admin-user" ? user.id : null,
         customer_name: cleanName,
         customer_phone: cleanPhone,
@@ -233,12 +235,17 @@ const Checkout = () => {
         partial_payment: partialAmount,
         due_amount: grandTotal - partialAmount,
         payment_method: paymentMethod,
-      }).select().single();
+      };
+
+      const { data: order, error } = await supabase.from("orders").insert(orderPayload).select().single();
 
       if (error) throw error;
 
+      const finalOrderId = order?.id || orderId;
+
       const orderItems = items.map((item) => ({
-        order_id: order.id,
+        id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        order_id: finalOrderId,
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
@@ -260,7 +267,7 @@ const Checkout = () => {
       try {
         if (settings?.order_webhook?.enabled && settings?.order_webhook?.url) {
           supabase.functions.invoke("order-webhook", {
-            body: { order_id: order.id },
+            body: { order_id: finalOrderId },
           }).catch((err) => console.error("Webhook failed:", err));
         }
       } catch (e) { console.warn("webhook invoke failed", e); }
@@ -271,7 +278,7 @@ const Checkout = () => {
           const payRes = await fetch("/api/eps/initiate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ order_id: order.id }),
+            body: JSON.stringify({ order_id: finalOrderId }),
           });
           const payData = await payRes.json();
           if (payRes.ok && payData.redirect_url) {
@@ -285,7 +292,7 @@ const Checkout = () => {
             toast.error(payData.error || "পেমেন্ট গেটওয়ে সংযোগে সমস্যা, তবে আপনার অর্ডার সফলভাবে সংরক্ষিত হয়েছে।");
             clearCart();
             sessionStorage.removeItem("checkout_session_id");
-            navigate(`/order-success/${order.id}?payment=failed`);
+            navigate(`/order-success/${finalOrderId}?payment=failed`);
             return;
           }
         } catch (payErr: any) {
@@ -293,7 +300,7 @@ const Checkout = () => {
           toast.error("পেমেন্ট গেটওয়েতে সংযোগ সমস্যা");
           clearCart();
           sessionStorage.removeItem("checkout_session_id");
-          navigate(`/order-success/${order.id}?payment=failed`);
+          navigate(`/order-success/${finalOrderId}?payment=failed`);
           return;
         }
       }
@@ -311,7 +318,7 @@ const Checkout = () => {
         });
       } catch (e) { console.warn("fbq failed", e); }
       toast.success("অর্ডার সফল হয়েছে!");
-      navigate(`/order-success/${order.id}`);
+      navigate(`/order-success/${finalOrderId}`);
     } catch (err: any) {
       let msg = err?.message || err?.error_description || err?.details || err?.hint;
       if (!msg) {

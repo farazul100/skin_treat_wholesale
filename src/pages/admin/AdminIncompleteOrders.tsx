@@ -55,8 +55,10 @@ const AdminIncompleteOrders = () => {
       }
       const cartItems = order.cart_items || [];
       const cartTotal = Number(order.cart_total) || 0;
+      const orderId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const { data: newOrder, error } = await supabase.from("orders").insert({
+        id: orderId,
         customer_name: order.customer_name,
         customer_phone: order.customer_phone,
         customer_email: order.customer_email || null,
@@ -71,9 +73,12 @@ const AdminIncompleteOrders = () => {
       }).select().single();
       if (error) throw error;
 
+      const finalOrderId = newOrder?.id || orderId;
+
       if (cartItems.length > 0) {
         const items = cartItems.map((item: any) => ({
-          order_id: newOrder.id,
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          order_id: finalOrderId,
           product_id: item.id || null,
           product_name: item.name,
           quantity: item.quantity,

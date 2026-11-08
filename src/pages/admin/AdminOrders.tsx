@@ -148,7 +148,9 @@ const AdminOrders = () => {
     mutationFn: async () => {
       const subtotal = newOrder.items.reduce((s, i) => s + i.price * i.quantity, 0);
       const total = subtotal + Number(newOrder.delivery_charge);
+      const orderId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const { data: order, error } = await supabase.from("orders").insert({
+        id: orderId,
         customer_name: newOrder.customer_name,
         customer_phone: newOrder.customer_phone,
         customer_email: newOrder.customer_email || null,
@@ -163,8 +165,10 @@ const AdminOrders = () => {
         notes: newOrder.notes || null,
       }).select().single();
       if (error) throw error;
+      const finalOrderId = order?.id || orderId;
       const orderItems = newOrder.items.filter(i => i.product_name).map(i => ({
-        order_id: order.id,
+        id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        order_id: finalOrderId,
         product_name: i.product_name,
         quantity: i.quantity,
         price: i.price,

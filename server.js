@@ -690,6 +690,9 @@ app.post('/api/:table', async (req, res, next) => {
 
       // Handle orders insertion safely
       if (table === 'orders') {
+        if (!item.id) {
+          item.id = crypto.randomUUID();
+        }
         if (!item.order_number) {
           const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
           const rand = Math.floor(1000 + Math.random() * 9000);
@@ -712,6 +715,9 @@ app.post('/api/:table', async (req, res, next) => {
 
       // Handle order_items insertion safely
       if (table === 'order_items') {
+        if (!item.id) {
+          item.id = crypto.randomUUID();
+        }
         if (item.product_id) {
           try {
             const [prodRows] = await pool.query('SELECT id FROM products WHERE id = ?', [item.product_id]);
@@ -723,12 +729,20 @@ app.post('/api/:table', async (req, res, next) => {
           }
         }
       }
+
+      // Handle incomplete_orders insertion safely
+      if (table === 'incomplete_orders') {
+        if (!item.id) {
+          item.id = crypto.randomUUID();
+        }
+      }
       const keys = Object.keys(item);
       const vals = Object.values(item).map(v => (typeof v === 'boolean' ? (v ? 1 : 0) : typeof v === 'object' && v !== null ? JSON.stringify(v) : v));
       const escapedKeys = keys.map(k => `\`${k}\``).join(', ');
       const placeholders = keys.map(() => '?').join(', ');
       const [result] = await pool.query(`INSERT INTO ?? (${escapedKeys}) VALUES (${placeholders})`, [table, ...vals]);
-      results.push({ ...item, id: result.insertId || item.id });
+      const returnedId = item.id || (result.insertId > 0 ? result.insertId : undefined);
+      results.push({ ...item, id: returnedId });
     }
     res.json(Array.isArray(data) ? results : results[0]);
   } catch (error) {
