@@ -75,7 +75,7 @@ const Checkout = () => {
     },
   });
 
-  const { data: cartProducts } = useQuery({
+  const { data: cartProducts, isLoading: isProductsLoading } = useQuery({
     queryKey: ["cart-products-checkout", items.map(i => i.id).join(",")],
     queryFn: async () => {
       if (items.length === 0) return [];
@@ -108,20 +108,54 @@ const Checkout = () => {
 
   const deliveryCharge = city === "dhaka" ? insideCharge : outsideCharge;
 
-  let allowedMethods = ["cod", "delivery_advance", "full_advance"];
+  // Multi-product payment rules evaluation:
+  // If ANY product in the cart strictly requires advance payment (does not allow COD),
+  // then COD is completely disabled for the entire cart!
+  let canCOD = true;
+  let hasFullAdvanceRequirement = false;
+  let hasDeliveryAdvanceRequirement = false;
+  const restrictedProducts: string[] = [];
+
   if (cartProducts && cartProducts.length > 0) {
     cartProducts.forEach(p => {
       const raw = p.payment_requirement ? String(p.payment_requirement).trim() : "";
       const pMethods = raw ? raw.split(",").map((s: string) => s.trim()).filter(Boolean) : ["cod"];
-      if (pMethods.length > 0) {
-        allowedMethods = allowedMethods.filter(m => pMethods.includes(m));
+      
+      const allowsCOD = pMethods.includes("cod");
+      const allowsDelAdv = pMethods.includes("delivery_advance");
+      const allowsFull = pMethods.includes("full_advance");
+
+      // If this product does NOT allow COD:
+      if (!allowsCOD) {
+        canCOD = false;
+        const matchingItem = items.find(i => i.id === p.id);
+        if (matchingItem && !restrictedProducts.includes(matchingItem.name)) {
+          restrictedProducts.push(matchingItem.name);
+        }
+
+        if (allowsFull && !allowsDelAdv) {
+          hasFullAdvanceRequirement = true;
+        } else {
+          hasDeliveryAdvanceRequirement = true;
+        }
       }
     });
   }
-  if (allowedMethods.length === 0) allowedMethods = ["cod"]; // Fallback if disjoint sets
 
-  const canCOD = allowedMethods.includes("cod");
-  const reqFull = !canCOD && allowedMethods.includes("full_advance") && !allowedMethods.includes("delivery_advance");
+  // Allowed methods based on strictest constraint:
+  let allowedMethods: string[] = [];
+  if (canCOD) {
+    // All products in cart allow COD
+    allowedMethods = ["cod", "delivery_advance", "full_advance"];
+  } else if (hasFullAdvanceRequirement) {
+    // Strictest: At least one product strictly requires 100% advance payment
+    allowedMethods = ["full_advance"];
+  } else {
+    // At least one product requires delivery charge in advance
+    allowedMethods = ["delivery_advance", "full_advance"];
+  }
+
+  const reqFull = !canCOD && hasFullAdvanceRequirement;
   const reqAdvance = !canCOD && !reqFull;
 
   const grandTotal = Number(totalPrice) + Number(deliveryCharge);
@@ -220,10 +254,16 @@ const Checkout = () => {
       return;
     }
 
+    if (isProductsLoading) {
+      toast.error("পণ্যের তথ্য যাচাই করা হচ্ছে, অনুগ্রহ করে একটু অপেক্ষা করুন...");
+      return;
+    }
+
     // Explicit check: If advance payment is required, but no payment method/gateway is enabled, block order completely
     if (requiresAdvance && !isPaymentEnabled) {
+      const productInfo = restrictedProducts.length > 0 ? `কার্টের "${restrictedProducts.join(", ")}" পণ্যের` : "এই পণ্যের";
       toast.error(
-        `অর্ডার করা সম্ভব নয়: এই পণ্যের শর্ত অনুযায়ী অগ্রিম ${advanceTypeLabel} ৳${requiredAdvanceAmount} পরিশোধ করা বাধ্যতামূলক, কিন্তু টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন বিকাশ/নগদ/EPS) সক্রিয় নেই।`,
+        `অর্ডার করা সম্ভব নয়: ${productInfo} শর্ত অনুযায়ী অগ্রিম ${advanceTypeLabel} ৳${requiredAdvanceAmount} পরিশোধ করা বাধ্যতামূলক, কিন্তু টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন বিকাশ/নগদ/EPS) সক্রিয় নেই।`,
         { duration: 12000 }
       );
       return;
@@ -502,7 +542,11 @@ const Checkout = () => {
                         <span>অগ্রিম পেমেন্ট মেথড অনুপস্থিত (অর্ডার সম্ভব নয়)</span>
                       </div>
                       <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
-                        এই পণ্যের শর্ত অনুযায়ী অগ্রিম <strong className="text-destructive font-bold">{advanceTypeLabel} ৳{requiredAdvanceAmount}</strong> পরিশোধ করা বাধ্যতামূলক। কিন্তু বর্তমানে সাইটে টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন EPS / বিকাশ / নগদ) সক্রিয় করা নেই।
+                        {restrictedProducts.length > 0 ? (
+                          <>কার্টের <strong className="text-foreground font-semibold">"{restrictedProducts.join(", ")}"</strong> পণ্যের শর্ত অনুযায়ী অগ্রিম <strong className="text-destructive font-bold">{advanceTypeLabel} ৳{requiredAdvanceAmount}</strong> পরিশোধ করা বাধ্যতামূলক।</>
+                        ) : (
+                          <>এই পণ্যের শর্ত অনুযায়ী অগ্রিম <strong className="text-destructive font-bold">{advanceTypeLabel} ৳{requiredAdvanceAmount}</strong> পরিশোধ করা বাধ্যতামূলক।</>
+                        )} কিন্তু বর্তমানে সাইটে টাকা নেওয়ার মতো কোনো অনলাইন পেমেন্ট মেথড (যেমন EPS / বিকাশ / নগদ) সক্রিয় করা নেই।
                       </p>
                       <div className="bg-background/80 rounded-lg p-2.5 text-xs font-semibold border border-destructive/20 text-destructive flex items-center justify-between">
                         <span>প্রয়োজনীয় অগ্রিম পরিমাণ:</span>
