@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +15,20 @@ const AdminLogin = () => {
   const { signIn, user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+
+  const { data: storeInfo } = useQuery({
+    queryKey: ["admin-login-store-info"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("*");
+      const map: Record<string, any> = {};
+      data?.forEach((s: any) => { map[s.key || s.setting_key] = s.value || s.setting_value; });
+      return {
+        title: map.site_title?.title || "Natural Shefa",
+        logo: map.site_logo?.url || ""
+      };
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Redirect once auth state confirms admin role (after login or if already logged in)
   useEffect(() => {
@@ -42,10 +58,14 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-secondary/30 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="h-14 w-14 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Natural Shefa</h1>
+          {storeInfo?.logo ? (
+            <img src={storeInfo.logo} alt="Logo" className="h-14 w-auto object-contain mx-auto mb-3" />
+          ) : (
+            <div className="h-14 w-14 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="h-7 w-7 text-primary-foreground" />
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-foreground">{storeInfo?.title || "Natural Shefa"}</h1>
           <p className="text-muted-foreground text-sm mt-1">অ্যাডমিন প্যানেল</p>
         </div>
 

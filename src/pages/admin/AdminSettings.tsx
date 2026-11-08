@@ -425,14 +425,14 @@ const AdminSettings = () => {
           {/* Favicon */}
           <FaviconUpload settings={settings} updateMutation={updateMutation} />
 
-          {/* Site Title (Browser Tab) */}
+          {/* Site Title & Store Name */}
           <div className="bg-card border rounded-xl p-5">
-            <h3 className="font-bold text-foreground mb-1">সাইট টাইটেল</h3>
-            <p className="text-sm text-muted-foreground mb-4">ব্রাউজার ট্যাবে ফেভিকনের পাশে এই টাইটেল দেখাবে</p>
+            <h3 className="font-bold text-foreground mb-1">স্টোর নাম ও সাইট টাইটেল</h3>
+            <p className="text-sm text-muted-foreground mb-4">ব্রাউজার ট্যাব, অ্যাডমিন লগইন পেজ ও বিভিন্ন জায়গায় এই নাম প্রদর্শিত হবে</p>
             <div className="space-y-3">
               <div>
-                <Label>টাইটেল</Label>
-                <Input placeholder="যেমন: Natural Shefa - প্রাকৃতিক অর্গানিক পণ্য" value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="mt-1" />
+                <Label>স্টোর / ওয়েবসাইটের নাম</Label>
+                <Input placeholder="যেমন: Natural Shefa বা Sunnahly" value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="mt-1" />
               </div>
               <Button variant="outline" onClick={() => updateMutation.mutate({ key: "site_title", value: { title: siteTitle } })}>
                 সেভ করুন
