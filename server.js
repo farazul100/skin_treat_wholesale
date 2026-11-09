@@ -1046,10 +1046,58 @@ app.delete('/api/:table', async (req, res) => {
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// The "catchall" handler: dynamically inject absolute OG metadata for WhatsApp/Telegram/Facebook link previews
+app.use(async (req, res) => {
+  const indexPath = path.join(__dirname, 'dist', 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send('Not Found');
+  }
+
+  try {
+    let html = fs.readFileSync(indexPath, 'utf8');
+
+    // Determine current host and protocol
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'sunnahly.com';
+    const baseUrl = `${proto}://${host}`;
+
+    // Read store settings for dynamic title and logo if present in DB
+    let storeTitle = '';
+    let storeLogo = '';
+    try {
+      const [settings] = await pool.query(
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_logo')"
+      );
+      if (settings && settings.length > 0) {
+        settings.forEach(s => {
+          try {
+            const parsed = typeof s.setting_value === 'string' ? JSON.parse(s.setting_value) : s.setting_value;
+            if (s.setting_key === 'site_title' && parsed?.title) storeTitle = parsed.title;
+            if (s.setting_key === 'site_logo' && parsed?.url) storeLogo = parsed.url;
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    const ogImgUrl = `${baseUrl}/og-image.png`;
+
+    if (storeTitle) {
+      html = html.replace(/<title>.*?<\/title>/i, `<title>${storeTitle}</title>`);
+      html = html.replace(/<meta property="og:title" content="[^"]*"/gi, `<meta property="og:title" content="${storeTitle}"`);
+      html = html.replace(/<meta name="twitter:title" content="[^"]*"/gi, `<meta name="twitter:title" content="${storeTitle}"`);
+    }
+
+    // Replace relative or legacy OG image with absolute URL
+    html = html.replace(/<meta property="og:image" content="[^"]*"/gi, `<meta property="og:image" content="${ogImgUrl}"`);
+    html = html.replace(/<meta name="twitter:image" content="[^"]*"/gi, `<meta name="twitter:image" content="${ogImgUrl}"`);
+
+    // Clean up any remaining lovable references
+    html = html.replace(/https:\/\/lovable\.dev[^\s"'>]*/gi, ogImgUrl);
+
+    res.send(html);
+  } catch (err) {
+    res.sendFile(indexPath);
+  }
 });
 
 // Start Server

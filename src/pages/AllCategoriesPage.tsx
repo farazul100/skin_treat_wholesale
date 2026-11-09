@@ -140,3 +140,4 @@ const AllCategoriesPage = () => {
 };
 
 export default AllCategoriesPage;
+
