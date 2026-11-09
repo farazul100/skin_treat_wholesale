@@ -225,5 +225,12 @@ export const supabase = {
         return { data: { publicUrl: path } };
       }
     })
-  }
+  },
+  channel: (_name: string) => ({
+    on: () => ({
+      subscribe: () => ({ unsubscribe: () => {} })
+    }),
+    subscribe: () => ({ unsubscribe: () => {} })
+  }),
+  removeChannel: (_channel: any) => {}
 };

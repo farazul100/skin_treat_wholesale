@@ -35,17 +35,28 @@ const AdminIncompleteOrders = () => {
         .order("last_activity", { ascending: false });
       return data || [];
     },
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
-    const channel = supabase
-      .channel("incomplete-orders-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "incomplete_orders" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["admin-incomplete-orders"] });
-        queryClient.invalidateQueries({ queryKey: ["recovery-analytics"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (typeof supabase?.channel === "function") {
+      try {
+        const channel = supabase
+          .channel("incomplete-orders-realtime")
+          .on("postgres_changes", { event: "*", schema: "public", table: "incomplete_orders" }, () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-incomplete-orders"] });
+            queryClient.invalidateQueries({ queryKey: ["recovery-analytics"] });
+          })
+          .subscribe();
+        return () => {
+          if (typeof supabase?.removeChannel === "function") {
+            supabase.removeChannel(channel);
+          }
+        };
+      } catch (e) {
+        console.warn("Realtime channel not available, using polling:", e);
+      }
+    }
   }, [queryClient]);
 
   const convertMutation = useMutation({
