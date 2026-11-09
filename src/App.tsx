@@ -9,6 +9,7 @@ import { FacebookPixelProvider } from "@/contexts/FacebookPixelContext";
 import Index from "./pages/Index";
 import ProductDetail from "./pages/ProductDetail";
 import AllProductsPage from "./pages/AllProductsPage";
+import AllCategoriesPage from "./pages/AllCategoriesPage";
 import CategoryProducts from "./pages/CategoryProducts";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -49,6 +50,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/products" element={<AllProductsPage />} />
+      <Route path="/categories" element={<AllCategoriesPage />} />
       {categoriesEnabled && <Route path="/category/:slug" element={<CategoryProducts />} />}
       <Route path="/product/:slug" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />

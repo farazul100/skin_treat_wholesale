@@ -151,9 +151,9 @@ const OrderSuccess = () => {
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               {downloading ? "তৈরি হচ্ছে..." : "ইনভয়েস PDF ডাউনলোড"}
             </Button>
-            <Link to="/shefa-tube">
+            <Link to="/categories">
               <Button variant="outline" className="gap-2 w-full">
-                <Package className="h-4 w-4" /> শেফা টিউব দেখুন
+                <Package className="h-4 w-4" /> সকল ক্যাটাগরি দেখুন
               </Button>
             </Link>
             <Link to="/"><Button className="w-full">হোমপেজে ফিরে যান</Button></Link>

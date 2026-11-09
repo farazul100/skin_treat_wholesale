@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 const navItems = [
   { label: "হোম", href: "/" },
   { label: "সকল পণ্য", href: "/products" },
-  { label: "শেফা টিউব", href: "/shefa-tube" },
+  { label: "সকল ক্যাটাগরি", href: "/categories" },
 ];
 
 const Header = () => {
