@@ -1043,8 +1043,27 @@ app.delete('/api/:table', async (req, res) => {
   }
 });
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, 'dist')));
+// Dedicated Open Graph banner routes with explicit mime types
+app.get('/og-image.png', (req, res) => {
+  const pngPath = path.join(__dirname, 'dist', 'og-image.png');
+  const fallback = path.join(__dirname, 'public', 'og-image.png');
+  const file = fs.existsSync(pngPath) ? pngPath : fallback;
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(file);
+});
+
+app.get('/og-image.jpg', (req, res) => {
+  const jpgPath = path.join(__dirname, 'dist', 'og-image.jpg');
+  const fallback = path.join(__dirname, 'public', 'og-image.jpg');
+  const file = fs.existsSync(jpgPath) ? jpgPath : fallback;
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(file);
+});
+
+// Serve static files from the React app (index: false ensures / route hits our dynamic OG handler)
+app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
 // The "catchall" handler: dynamically inject absolute OG metadata for WhatsApp/Telegram/Facebook link previews
 app.use(async (req, res) => {
@@ -1060,6 +1079,7 @@ app.use(async (req, res) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.headers['x-forwarded-host'] || req.get('host') || 'sunnahly.com';
     const baseUrl = `${proto}://${host}`;
+    const currentUrl = `${baseUrl}${req.originalUrl || req.url || '/'}`;
 
     // Read store settings for dynamic title and logo if present in DB
     let storeTitle = '';
@@ -1087,8 +1107,13 @@ app.use(async (req, res) => {
       html = html.replace(/<meta name="twitter:title" content="[^"]*"/gi, `<meta name="twitter:title" content="${storeTitle}"`);
     }
 
-    // Replace relative or legacy OG image with absolute URL
+    // Ensure og:url is current full URL
+    html = html.replace(/<meta property="og:url" content="[^"]*"/gi, `<meta property="og:url" content="${currentUrl}"`);
+    html = html.replace(/<meta name="twitter:url" content="[^"]*"/gi, `<meta name="twitter:url" content="${currentUrl}"`);
+
+    // Ensure absolute OG image URLs
     html = html.replace(/<meta property="og:image" content="[^"]*"/gi, `<meta property="og:image" content="${ogImgUrl}"`);
+    html = html.replace(/<meta property="og:image:secure_url" content="[^"]*"/gi, `<meta property="og:image:secure_url" content="${ogImgUrl}"`);
     html = html.replace(/<meta name="twitter:image" content="[^"]*"/gi, `<meta name="twitter:image" content="${ogImgUrl}"`);
 
     // Clean up any remaining lovable references
