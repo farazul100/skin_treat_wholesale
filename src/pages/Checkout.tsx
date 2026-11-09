@@ -208,25 +208,29 @@ const Checkout = () => {
 
   // Save incomplete order data
   const saveIncompleteOrder = useCallback(async (currentForm: typeof form) => {
-
     const sessionId = getSessionId();
     const payload = {
       session_id: sessionId,
-      customer_name: currentForm.name || null,
-      customer_phone: currentForm.phone || null,
-      shipping_address: currentForm.address || null,
-      city: "বাংলাদেশ",
+      customer_name: currentForm.name?.trim() || null,
+      customer_phone: currentForm.phone?.trim() || null,
+      shipping_address: currentForm.address?.trim() || null,
+      city: city === "dhaka" ? "ঢাকার ভেতর" : "ঢাকার বাইরে",
       cart_items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
       cart_total: totalPrice,
       last_activity: new Date().toISOString(),
     };
 
     try {
-      if (incompleteIdRef.current) {
-        await supabase.from("incomplete_orders").update(payload).eq("id", incompleteIdRef.current);
+      const storedId = incompleteIdRef.current || sessionStorage.getItem("incomplete_order_id");
+      if (storedId) {
+        incompleteIdRef.current = storedId;
+        await supabase.from("incomplete_orders").update(payload).eq("id", storedId);
       } else {
         const { data } = await supabase.from("incomplete_orders").insert(payload).select("id").single();
-        if (data) incompleteIdRef.current = data.id;
+        if (data?.id) {
+          incompleteIdRef.current = data.id;
+          sessionStorage.setItem("incomplete_order_id", data.id);
+        }
       }
     } catch (err) {
       console.error("Failed to save incomplete order:", err);
@@ -241,15 +245,26 @@ const Checkout = () => {
     saveIncompleteOrder(form);
   }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced save on form change
+  // Fast debounced save on form change (400ms instead of 1500ms)
   useEffect(() => {
     if (items.length === 0) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       saveIncompleteOrder(form);
-    }, 1500);
+    }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [form, city, items, saveIncompleteOrder]);
+  }, [form.name, form.phone, form.address, city, items, saveIncompleteOrder]);
+
+  // Capture immediately if user switches tab / app or closes window
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden" && (form.name || form.phone || form.address)) {
+        saveIncompleteOrder(form);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [form, saveIncompleteOrder]);
 
   if (items.length === 0) {
     return (
@@ -338,9 +353,12 @@ const Checkout = () => {
       if (itemsError) throw itemsError;
 
       // Mark incomplete order as converted (non-critical)
-      if (incompleteIdRef.current) {
+      const convIncompleteId = incompleteIdRef.current || sessionStorage.getItem("incomplete_order_id");
+      if (convIncompleteId) {
         try {
-          await supabase.from("incomplete_orders").update({ is_converted: true }).eq("id", incompleteIdRef.current);
+          await supabase.from("incomplete_orders").update({ is_converted: true }).eq("id", convIncompleteId);
+          sessionStorage.removeItem("incomplete_order_id");
+          sessionStorage.removeItem("checkout_session_id");
         } catch (e) { console.warn("incomplete update failed", e); }
       }
 
@@ -445,23 +463,56 @@ const Checkout = () => {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">নাম *</Label>
-                      <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="আপনার নাম" required />
+                      <Input
+                        id="name"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onBlur={() => saveIncompleteOrder(form)}
+                        placeholder="আপনার নাম"
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="phone">মোবাইল নম্বর *</Label>
-                      <Input id="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="01XXXXXXXXX" required />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="tel"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        onBlur={() => saveIncompleteOrder(form)}
+                        placeholder="01XXXXXXXXX"
+                        required
+                      />
                     </div>
                   </div>
                   <div className="mt-4">
                     <Label htmlFor="address">সম্পূর্ণ ঠিকানা *</Label>
-                    <Textarea id="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="বাসা নং, রোড, এলাকা, জেলা" required rows={2} />
+                    <Textarea
+                      id="address"
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      onBlur={() => saveIncompleteOrder(form)}
+                      placeholder="বাসা নং, রোড, এলাকা, জেলা"
+                      required
+                      rows={2}
+                    />
                   </div>
                 </div>
 
                 {/* Delivery Charge Info Card */}
                 <div className="bg-card border rounded-xl p-5">
                   <h3 className="font-bold text-foreground mb-4">ডেলিভারি এরিয়া</h3>
-                  <RadioGroup value={city} onValueChange={setCity} className="space-y-3">
+                  <RadioGroup
+                    value={city}
+                    onValueChange={(val) => {
+                      setCity(val);
+                      saveIncompleteOrder(form);
+                    }}
+                    className="space-y-3"
+                  >
                     <div className="flex items-center gap-3 border rounded-lg p-3">
                       <RadioGroupItem value="dhaka" id="dhaka" />
                       <Label htmlFor="dhaka" className="cursor-pointer flex-1 flex justify-between items-center">

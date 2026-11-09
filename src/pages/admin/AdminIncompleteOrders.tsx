@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, Clock, Phone, User, MapPin, Trash2, ShoppingCart, Download, CheckSquare, Square, ArrowRight, BarChart3 } from "lucide-react";
+import { AlertTriangle, Clock, Phone, User, MapPin, Trash2, ShoppingCart, Download, CheckSquare, Square, ArrowRight, BarChart3, PhoneCall, Copy, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -22,8 +24,19 @@ const AdminIncompleteOrders = () => {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; order: any | null }>({ open: false, order: null });
+  const [convertForm, setConvertForm] = useState({ name: "", phone: "", address: "", city: "" });
   const [bulkConvertDialog, setBulkConvertDialog] = useState(false);
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+
+  const openConvertDialog = (order: any) => {
+    setConvertForm({
+      name: order.customer_name || "",
+      phone: order.customer_phone || "",
+      address: order.shipping_address || "",
+      city: order.city || "ঢাকা",
+    });
+    setConvertDialog({ open: true, order });
+  };
 
   const { data: orders } = useQuery({
     queryKey: ["admin-incomplete-orders"],
@@ -60,9 +73,14 @@ const AdminIncompleteOrders = () => {
   }, [queryClient]);
 
   const convertMutation = useMutation({
-    mutationFn: async (order: any) => {
-      if (!order.customer_name || !order.customer_phone || !order.shipping_address) {
-        throw new Error("নাম, ফোন ও ঠিকানা ছাড়া অর্ডারে রূপান্তর সম্ভব নয়");
+    mutationFn: async ({ order, formValues }: { order: any; formValues?: typeof convertForm }) => {
+      const name = formValues?.name?.trim() || order.customer_name || "সম্মানিত গ্রাহক";
+      const phone = formValues?.phone?.trim() || order.customer_phone;
+      const address = formValues?.address?.trim() || order.shipping_address || "ঠিকানা দেওয়া হয়নি";
+      const city = formValues?.city?.trim() || order.city || "ঢাকা";
+
+      if (!phone) {
+        throw new Error("অর্ডারে রূপান্তর করার জন্য কমপক্ষে একটি মোবাইল নম্বর থাকা প্রয়োজন");
       }
       const cartItems = order.cart_items || [];
       const cartTotal = Number(order.cart_total) || 0;
@@ -70,11 +88,11 @@ const AdminIncompleteOrders = () => {
 
       const { data: newOrder, error } = await supabase.from("orders").insert({
         id: orderId,
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
+        customer_name: name,
+        customer_phone: phone,
         customer_email: order.customer_email || null,
-        shipping_address: order.shipping_address,
-        city: order.city || "ঢাকা",
+        shipping_address: address,
+        city: city,
         area: order.area || null,
         subtotal: cartTotal,
         delivery_charge: 60,
@@ -125,11 +143,11 @@ const AdminIncompleteOrders = () => {
 
   const handleBulkConvert = async () => {
     const ids = Array.from(selected);
-    const convertible = orders?.filter((o: any) => ids.includes(o.id) && o.customer_name && o.customer_phone && o.shipping_address) || [];
+    const convertible = orders?.filter((o: any) => ids.includes(o.id) && (o.customer_phone || o.customer_name)) || [];
     let successCount = 0;
     for (const order of convertible) {
       try {
-        await convertMutation.mutateAsync(order);
+        await convertMutation.mutateAsync({ order });
         successCount++;
       } catch {}
     }
@@ -248,7 +266,8 @@ const AdminIncompleteOrders = () => {
               const cartItems = order.cart_items || [];
               const filledFields = [order.customer_name, order.customer_phone, order.customer_email, order.shipping_address].filter(Boolean).length;
               const completionPercent = Math.round((filledFields / 4) * 100);
-              const canConvert = order.customer_name && order.customer_phone && order.shipping_address;
+              const hasContact = Boolean(order.customer_name || order.customer_phone || order.shipping_address);
+              const canConvert = Boolean(order.customer_phone || (order.customer_name && order.shipping_address));
 
               return (
                 <div key={order.id} className={`bg-card border rounded-xl p-4 transition-colors ${selected.has(order.id) ? "border-primary/50 bg-primary/5" : ""}`}>
@@ -257,50 +276,98 @@ const AdminIncompleteOrders = () => {
                       <Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} />
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">{timeAgo(order.last_activity)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        completionPercent >= 75 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                        completionPercent >= 50 ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-muted-foreground"
                       }`}>
                         {completionPercent}% সম্পন্ন
                       </span>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1.5">
                       {canConvert && (
-                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-primary text-xs"
-                          onClick={() => setConvertDialog({ open: true, order })}>
-                          <ArrowRight className="h-3.5 w-3.5" /> অর্ডারে
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-primary border-primary/30 hover:bg-primary/10 text-xs font-semibold"
+                          onClick={() => openConvertDialog(order)}
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5" /> অর্ডারে রূপান্তর
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => { if (confirm("মুছে ফেলতে চান?")) supabase.from("incomplete_orders").delete().eq("id", order.id).then(() => { queryClient.invalidateQueries({ queryKey: ["admin-incomplete-orders"] }); toast.success("মুছে ফেলা হয়েছে"); }); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                    {order.customer_name && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-foreground">{order.customer_name}</span>
+                  {/* Customer Information Box */}
+                  {hasContact ? (
+                    <div className="bg-secondary/40 border rounded-lg p-3 my-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-primary flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5" /> কাস্টমারের যোগাযোগ তথ্য:
+                        </span>
+                        {order.customer_phone && (
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={`tel:${order.customer_phone}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                            >
+                              <PhoneCall className="h-3.5 w-3.5" /> কল করুন
+                            </a>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {order.customer_phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a href={`tel:${order.customer_phone}`} className="text-primary hover:underline">{order.customer_phone}</a>
+                      <div className="grid sm:grid-cols-2 gap-2 text-sm pt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-xs min-w-[50px]">নাম:</span>
+                          <span className="font-semibold text-foreground">
+                            {order.customer_name || <span className="text-muted-foreground font-normal italic">দেওয়া হয়নি</span>}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-xs min-w-[50px]">মোবাইল:</span>
+                          {order.customer_phone ? (
+                            <div className="flex items-center gap-1.5">
+                              <a href={`tel:${order.customer_phone}`} className="font-bold text-primary hover:underline">
+                                {order.customer_phone}
+                              </a>
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-foreground text-xs p-1"
+                                title="কপি করুন"
+                                onClick={() => { navigator.clipboard.writeText(order.customer_phone); toast.success("নম্বর কপি হয়েছে"); }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic">দেওয়া হয়নি</span>
+                          )}
+                        </div>
+                        {order.customer_email && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs min-w-[50px]">ইমেইল:</span>
+                            <span className="text-foreground">{order.customer_email}</span>
+                          </div>
+                        )}
+                        <div className="sm:col-span-2 flex items-start gap-2">
+                          <span className="text-muted-foreground text-xs min-w-[50px]">ঠিকানা:</span>
+                          <span className="text-foreground">
+                            {order.shipping_address || <span className="text-muted-foreground italic">দেওয়া হয়নি</span>}
+                            {order.city ? ` (${order.city})` : ""}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                    {order.customer_email && (
-                      <div className="text-muted-foreground text-xs">{order.customer_email}</div>
-                    )}
-                    {order.shipping_address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-foreground line-clamp-1">{order.shipping_address}</span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 my-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>কাস্টমার চেকআউট পেজে এসেছিল কিন্তু নাম বা মোবাইল নম্বর টাইপ না করেই চলে গেছে (০% সম্পন্ন)।</span>
+                    </div>
+                  )}
 
+                  {/* Cart Items */}
                   {cartItems.length > 0 && (
                     <div className="mt-3 pt-2 border-t">
                       <p className="text-xs text-muted-foreground mb-1">কার্টে {cartItems.length}টি পণ্য</p>
@@ -311,39 +378,26 @@ const AdminIncompleteOrders = () => {
                     </div>
                   )}
 
-                  {!order.customer_name && !order.customer_phone && (
-                    <div className="mt-3 pt-2 border-t bg-muted/30 -mx-4 -mb-4 px-4 py-3 rounded-b-xl">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">
-                        🔒 কাস্টমার যোগাযোগ তথ্য দেয়নি — রিটার্গেটিং ডেটা:
-                      </p>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-start gap-2">
-                          <span className="text-muted-foreground min-w-[90px]">সেশন আইডি:</span>
-                          <code className="font-mono text-foreground break-all bg-background px-1.5 py-0.5 rounded border text-[11px]">
-                            {order.session_id}
-                          </code>
-                          <button
-                            type="button"
-                            className="text-primary hover:underline shrink-0"
-                            onClick={() => { navigator.clipboard.writeText(order.session_id); toast.success("কপি হয়েছে"); }}
-                          >
-                            কপি
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="text-muted-foreground min-w-[90px]">প্রথম সক্রিয়:</span>
-                          <span className="text-foreground">{new Date(order.created_at).toLocaleString("bn-BD")}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="text-muted-foreground min-w-[90px]">শেষ সক্রিয়:</span>
-                          <span className="text-foreground">{new Date(order.last_activity).toLocaleString("bn-BD")}</span>
-                        </div>
-                        <p className="text-muted-foreground italic mt-1.5">
-                          💡 এই সেশন আইডি Facebook Pixel কাস্টম অডিয়েন্সে রিটার্গেটিং অ্যাড দেখানোর জন্য ব্যবহার করুন।
-                        </p>
-                      </div>
+                  {/* Retargeting / Session Info */}
+                  <div className="mt-3 pt-2 border-t bg-muted/20 -mx-4 -mb-4 px-4 py-2.5 rounded-b-xl text-xs space-y-1">
+                    <div className="flex items-start gap-2">
+                      <span className="text-muted-foreground min-w-[90px]">সেশন আইডি:</span>
+                      <code className="font-mono text-foreground break-all bg-background px-1.5 py-0.5 rounded border text-[11px]">
+                        {order.session_id}
+                      </code>
+                      <button
+                        type="button"
+                        className="text-primary hover:underline shrink-0"
+                        onClick={() => { navigator.clipboard.writeText(order.session_id); toast.success("কপি হয়েছে"); }}
+                      >
+                        কপি
+                      </button>
                     </div>
-                  )}
+                    <div className="flex gap-4 text-muted-foreground">
+                      <span>প্রথম সক্রিয়: <strong className="text-foreground font-normal">{new Date(order.created_at).toLocaleString("bn-BD")}</strong></span>
+                      <span>শেষ সক্রিয়: <strong className="text-foreground font-normal">{new Date(order.last_activity).toLocaleString("bn-BD")}</strong></span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -353,25 +407,64 @@ const AdminIncompleteOrders = () => {
 
       {/* Convert Confirmation Dialog */}
       <Dialog open={convertDialog.open} onOpenChange={(v) => setConvertDialog({ open: v, order: v ? convertDialog.order : null })}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>অর্ডারে রূপান্তর করুন</DialogTitle>
+            <DialogTitle>ইনকমপ্লিট অর্ডার রূপান্তর করুন</DialogTitle>
             <DialogDescription>
-              এই ইনকমপ্লিট অর্ডারটি সরাসরি অর্ডারে রূপান্তর হবে। এটি পূর্বাবস্থায় ফেরানো যাবে না।
+              কাস্টমারের সাথে কথা বলে তথ্যগুলো নিশ্চিত করে সরাসরি সাধারণ অর্ডারে রূপান্তর করুন।
             </DialogDescription>
           </DialogHeader>
           {convertDialog.order && (
-            <div className="text-sm space-y-1 bg-secondary/50 rounded-lg p-3">
-              <p><span className="text-muted-foreground">নাম:</span> {convertDialog.order.customer_name}</p>
-              <p><span className="text-muted-foreground">ফোন:</span> {convertDialog.order.customer_phone}</p>
-              <p><span className="text-muted-foreground">মোট:</span> <span className="font-bold text-primary">৳{Number(convertDialog.order.cart_total)}</span></p>
+            <div className="space-y-3 py-2">
+              <div className="space-y-1">
+                <Label htmlFor="conv-name" className="text-xs">কাস্টমারের নাম *</Label>
+                <Input
+                  id="conv-name"
+                  value={convertForm.name}
+                  onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
+                  placeholder="কাস্টমারের নাম"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="conv-phone" className="text-xs">মোবাইল নম্বর *</Label>
+                <Input
+                  id="conv-phone"
+                  value={convertForm.phone}
+                  onChange={(e) => setConvertForm({ ...convertForm, phone: e.target.value })}
+                  placeholder="01XXXXXXXXX"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="conv-address" className="text-xs">ডেলিভারি ঠিকানা</Label>
+                <Input
+                  id="conv-address"
+                  value={convertForm.address}
+                  onChange={(e) => setConvertForm({ ...convertForm, address: e.target.value })}
+                  placeholder="বাসা নং, রোড, এলাকা, জেলা"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="conv-city" className="text-xs">শহর / এরিয়া</Label>
+                <Input
+                  id="conv-city"
+                  value={convertForm.city}
+                  onChange={(e) => setConvertForm({ ...convertForm, city: e.target.value })}
+                  placeholder="ঢাকা / ঢাকার বাইরে"
+                />
+              </div>
+              <div className="bg-secondary/50 rounded-lg p-2.5 text-xs flex justify-between items-center">
+                <span className="text-muted-foreground">কার্ট মোট মূল্য:</span>
+                <span className="font-bold text-primary text-sm">৳{Number(convertDialog.order.cart_total)}</span>
+              </div>
             </div>
           )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setConvertDialog({ open: false, order: null })}>বাতিল</Button>
-            <Button onClick={() => convertDialog.order && convertMutation.mutate(convertDialog.order)}
-              disabled={convertMutation.isPending}>
-              {convertMutation.isPending ? "রূপান্তর হচ্ছে..." : "রূপান্তর করুন"}
+            <Button
+              onClick={() => convertDialog.order && convertMutation.mutate({ order: convertDialog.order, formValues: convertForm })}
+              disabled={convertMutation.isPending || !convertForm.phone}
+            >
+              {convertMutation.isPending ? "রূপান্তর হচ্ছে..." : "কনফার্ম ও রূপান্তর করুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
