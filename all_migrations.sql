@@ -567,6 +567,29 @@ BEGIN
 END;
 $function$;
 
+-- ==========================================
+-- Admin Users & Sessions Table (MySQL / phpMyAdmin)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `full_name` VARCHAR(255),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `admin_sessions` (
+  `token` VARCHAR(128) PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `expires_at` DATETIME NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 INSERT INTO public.site_settings (key, value)
 VALUES ('categories_enabled', '{"enabled": false}'::jsonb)
 ON CONFLICT (key) DO NOTHING;
@@ -618,6 +641,29 @@ BEGIN
   RETURN result;
 END;
 $function$;
+
+-- ==========================================
+-- Admin Users & Sessions Table (MySQL / phpMyAdmin)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `full_name` VARCHAR(255),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `admin_sessions` (
+  `token` VARCHAR(128) PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `expires_at` DATETIME NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE OR REPLACE FUNCTION public.get_public_setting(_key text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -664,3 +710,26 @@ BEGIN
   RETURN result;
 END;
 $function$;
+
+-- ==========================================
+-- Admin Users & Sessions Table (MySQL / phpMyAdmin)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `full_name` VARCHAR(255),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `admin_sessions` (
+  `token` VARCHAR(128) PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(50) DEFAULT 'admin',
+  `expires_at` DATETIME NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+

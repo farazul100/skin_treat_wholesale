@@ -118,7 +118,52 @@ export const supabase = {
         return { data: { user: null }, error: null };
       }
     },
-    updateUser: async () => ({ data: {}, error: null }),
+    signUp: async ({ email, password, options }: any) => {
+      try {
+        const full_name = options?.data?.full_name || "";
+        const res = await fetch(`${API_URL}/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, full_name, options })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          return { data: null, error: new Error(data.error || "সাইনআপ ব্যর্থ হয়েছে") };
+        }
+        if (data.token) {
+          localStorage.setItem("admin_token", data.token);
+          const session = { user: data.user, access_token: data.token };
+          authListeners.forEach(cb => cb('SIGNED_IN', session));
+          return { data: { user: data.user, session }, error: null };
+        }
+        return { data: { user: data.user, session: null }, error: null };
+      } catch (err: any) {
+        return { data: null, error: err };
+      }
+    },
+    updateUser: async (attributes: any) => {
+      try {
+        const token = localStorage.getItem("admin_token");
+        if (!token) return { data: null, error: new Error("লগইন করা নেই") };
+        if (attributes?.password) {
+          const res = await fetch(`${API_URL}/auth/change-password`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ newPassword: attributes.password })
+          });
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            return { data: null, error: new Error(data.error || "পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে") };
+          }
+        }
+        return { data: { user: null }, error: null };
+      } catch (err: any) {
+        return { data: null, error: err };
+      }
+    },
     signOut: async () => {
       const token = localStorage.getItem("admin_token");
       if (token) {

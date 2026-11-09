@@ -164,10 +164,14 @@ async function ensureAdminAuthTables() {
         email VARCHAR(255) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(50) DEFAULT 'admin',
+        full_name VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
+    try {
+      await pool.query('ALTER TABLE admin_users ADD COLUMN full_name VARCHAR(255)');
+    } catch (_) {}
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_sessions (
         token VARCHAR(128) PRIMARY KEY,
@@ -186,8 +190,8 @@ async function ensureAdminAuthTables() {
       const defaultEmail = 'admin@naturalshefa.com';
       const defaultHash = crypto.createHash('sha256').update('admin123').digest('hex');
       await pool.query(
-        'INSERT INTO admin_users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
-        [defaultId, defaultEmail, defaultHash, 'admin']
+        'INSERT INTO admin_users (id, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
+        [defaultId, defaultEmail, defaultHash, 'admin', 'Store Admin']
       );
       console.log('Default admin user created: admin@naturalshefa.com / admin123');
     }
@@ -322,8 +326,71 @@ app.get('/api/debug_info', (req, res) => {
 });
 
 // ==========================================
-// ADMIN AUTHENTICATION ROUTES
+// AUTHENTICATION ROUTES (LOGIN & SIGNUP)
 // ==========================================
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password, full_name, options } = req.body;
+    const name = full_name || (options && options.data && options.data.full_name) || '';
+    if (!email || !password) {
+      return res.status(400).json({ error: 'ইমেইল এবং পাসওয়ার্ড প্রদান করুন' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' });
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    // Check if user already exists
+    const [existing] = await pool.query('SELECT id FROM admin_users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (existing && existing.length > 0) {
+      return res.status(400).json({ error: 'এই ইমেইল দিয়ে ইতিমধ্যে একটি একাউন্ট রয়েছে' });
+    }
+
+    const userId = crypto.randomUUID();
+    const hash = crypto.createHash('sha256').update(String(password)).digest('hex');
+
+    // First registered user gets 'admin', others get 'customer'
+    const [countRows] = await pool.query('SELECT COUNT(*) as count FROM admin_users');
+    const role = (countRows[0].count === 0) ? 'admin' : 'customer';
+
+    try {
+      await pool.query(
+        'INSERT INTO admin_users (id, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
+        [userId, cleanEmail, hash, role, name]
+      );
+    } catch (_) {
+      await pool.query(
+        'INSERT INTO admin_users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
+        [userId, cleanEmail, hash, role]
+      );
+    }
+
+    // Auto-create session token for immediate login
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await pool.query(
+      'INSERT INTO admin_sessions (token, user_id, email, role, expires_at) VALUES (?, ?, ?, ?, ?)',
+      [token, userId, cleanEmail, role, expiresAt]
+    );
+
+    const userObj = {
+      id: userId,
+      email: cleanEmail,
+      role,
+      user_metadata: { full_name: name }
+    };
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: userObj
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: err.message || 'সাইনআপ ব্যর্থ হয়েছে' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -333,10 +400,16 @@ app.post('/api/auth/login', async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
     const hash = crypto.createHash('sha256').update(String(password)).digest('hex');
 
-    const [users] = await pool.query(
-      'SELECT id, email, role FROM admin_users WHERE LOWER(email) = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
+    let [users] = await pool.query(
+      'SELECT id, email, role, full_name FROM admin_users WHERE LOWER(email) = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
       [cleanEmail, hash, String(password)]
-    );
+    ).catch(async () => {
+      // Fallback if full_name column not found
+      return await pool.query(
+        'SELECT id, email, role FROM admin_users WHERE LOWER(email) = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
+        [cleanEmail, hash, String(password)]
+      );
+    });
 
     if (!users || users.length === 0) {
       return res.status(401).json({ error: 'ভুল ইমেইল বা পাসওয়ার্ড' });
@@ -352,7 +425,12 @@ app.post('/api/auth/login', async (req, res) => {
     );
 
     res.json({
-      user: { id: admin.id, email: admin.email, role: admin.role || 'admin' },
+      user: {
+        id: admin.id,
+        email: admin.email,
+        role: admin.role || 'admin',
+        user_metadata: { full_name: admin.full_name || '' }
+      },
       token
     });
   } catch (err) {
@@ -379,8 +457,19 @@ app.get('/api/auth/session', async (req, res) => {
     }
 
     const s = rows[0];
+    let fullName = '';
+    try {
+      const [uRows] = await pool.query('SELECT full_name FROM admin_users WHERE id = ?', [s.user_id]);
+      if (uRows && uRows.length > 0) fullName = uRows[0].full_name || '';
+    } catch (_) {}
+
     res.json({
-      user: { id: s.user_id, email: s.email, role: s.role || 'admin' }
+      user: {
+        id: s.user_id,
+        email: s.email,
+        role: s.role || 'admin',
+        user_metadata: { full_name: fullName }
+      }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -417,13 +506,15 @@ app.post('/api/auth/change-password', async (req, res) => {
       return res.status(400).json({ error: 'নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' });
     }
 
-    const currentHash = crypto.createHash('sha256').update(String(currentPassword)).digest('hex');
-    const [userRows] = await pool.query(
-      'SELECT id FROM admin_users WHERE id = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
-      [rows[0].user_id, currentHash, String(currentPassword)]
-    );
-    if (!userRows || userRows.length === 0) {
-      return res.status(400).json({ error: 'বর্তমান পাসওয়ার্ড সঠিক নয়' });
+    if (currentPassword) {
+      const currentHash = crypto.createHash('sha256').update(String(currentPassword)).digest('hex');
+      const [userRows] = await pool.query(
+        'SELECT id FROM admin_users WHERE id = ? AND (password_hash = ? OR password_hash = SHA2(?, 256))',
+        [rows[0].user_id, currentHash, String(currentPassword)]
+      );
+      if (!userRows || userRows.length === 0) {
+        return res.status(400).json({ error: 'বর্তমান পাসওয়ার্ড সঠিক নয়' });
+      }
     }
 
     const newHash = crypto.createHash('sha256').update(String(newPassword)).digest('hex');

@@ -25,7 +25,7 @@ const Auth = () => {
         toast.success("সফলভাবে লগইন হয়েছে");
       } else {
         await signUp(form.email, form.password, form.name);
-        toast.success("একাউন্ট তৈরি হয়েছে! ইমেইল যাচাই করুন।");
+        toast.success("একাউন্ট সফলভাবে তৈরি হয়েছে!");
       }
       navigate("/dashboard");
     } catch (err: any) {
