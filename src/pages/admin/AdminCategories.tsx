@@ -125,7 +125,11 @@ const AdminCategories = () => {
                 <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="স্বয়ংক্রিয়" />
               </div>
               <div>
-                <Label>ছবি</Label>
+                <div className="flex items-center justify-between">
+                  <Label>ছবি</Label>
+                  <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 400×400 px</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">১:১ স্কয়ার রেশিও (400×400 বা 500×500 px)। ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড PNG বা WebP রিকমেন্ডেড।</p>
                 {form.image ? (
                   <div className="relative mt-2 w-24 h-24 rounded-lg overflow-hidden border">
                     <img src={form.image} alt="Category" className="w-full h-full object-cover" />
@@ -136,7 +140,7 @@ const AdminCategories = () => {
                 ) : (
                   <label className="mt-2 flex items-center gap-2 border-2 border-dashed rounded-lg p-3 cursor-pointer hover:bg-secondary/50">
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
-                    <span className="text-sm text-muted-foreground">{uploading ? "আপলোড হচ্ছে..." : "ছবি আপলোড (200×200px)"}</span>
+                    <span className="text-sm text-muted-foreground">{uploading ? "আপলোড হচ্ছে..." : "ছবি আপলোড (400×400px)"}</span>
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = ""; }} />
                   </label>
                 )}

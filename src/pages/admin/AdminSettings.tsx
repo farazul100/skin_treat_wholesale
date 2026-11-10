@@ -31,7 +31,11 @@ const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMuta
 
   return (
     <div className="bg-card border rounded-xl p-5">
-      <h3 className="font-bold text-foreground mb-4">ফেভিকন</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-bold text-foreground">ফেভিকন (Favicon)</h3>
+        <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 64×64 বা 128×128 px</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">১:১ স্কয়ার রেশিও (PNG, ICO, বা SVG)। ব্রাউজার ট্যাবে ওয়েবসাইটের আইকন হিসেবে নিখুঁত দেখাবে।</p>
       <div className="flex items-center gap-4">
         {faviconUrl ? (
           <div className="relative group">
@@ -53,7 +57,7 @@ const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMuta
             </Button>
             <input type="file" accept="image/png,image/x-icon,image/svg+xml" className="hidden" onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]); e.target.value = ""; }} />
           </label>
-          <p className="text-xs text-muted-foreground mt-1">PNG, ICO, বা SVG। ব্রাউজার ট্যাবে দেখাবে।</p>
+          <p className="text-xs text-muted-foreground mt-1">সঠিক সাইজ: 64×64 px বা 128×128 px (PNG, ICO, বা SVG)।</p>
         </div>
       </div>
     </div>
@@ -88,9 +92,12 @@ const SocialShareBannerUpload = ({ settings, updateMutation }: { settings: any; 
 
   return (
     <div className="bg-card border rounded-xl p-5">
-      <h3 className="font-bold text-foreground mb-1">সোশ্যাল শেয়ার প্রিভিউ ব্যানার (WhatsApp, Telegram, Facebook)</h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        কাউকে লিংক পাঠালে এই ব্যানারটি প্রিভিউ কার্ড হিসেবে যাবে। খালি রাখলে হোমপেইজের সক্রিয় স্লাইডার ব্যানারটি স্বয়ংক্রিয়ভাবে দেখাবে।
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-bold text-foreground">সোশ্যাল শেয়ার প্রিভিউ ব্যানার (WhatsApp, Telegram, Facebook)</h3>
+        <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 1200×630 px</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        অনুপাত ১.৯১:১ (JPG বা PNG)। ফেসবুক, টেলিগ্রাম বা হোয়াটসঅ্যাপে লিংক শেয়ার করলে এই ব্যানারটি সম্পূর্ণ দেখাবে। খালি রাখলে হোমপেইজের সক্রিয় স্লাইডারটি স্বয়ংক্রিয়ভাবে দেখাবে।
       </p>
       <div className="space-y-4">
         {ogUrl ? (
@@ -113,11 +120,11 @@ const SocialShareBannerUpload = ({ settings, updateMutation }: { settings: any; 
         <div>
           <label className="cursor-pointer">
             <Button variant="outline" size="sm" asChild disabled={uploading}>
-              <span>{uploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "কাস্টম শেয়ার ব্যানার আপলোড করুন"}</span>
+              <span>{uploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "কাস্টম শেয়ার ব্যানার আপলোড করুন (1200×630 px)"}</span>
             </Button>
             <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]); e.target.value = ""; }} />
           </label>
-          <p className="text-xs text-muted-foreground mt-1">১২০০ × ৬৩০ পিক্সেল (JPG বা PNG) রিকমেন্ডেড।</p>
+          <p className="text-xs text-muted-foreground mt-1">সঠিক রেজোলিউশন: ১২০০ × ৬৩০ পিক্সেল (অনুপাত ১.৯১:১, JPG বা PNG)।</p>
         </div>
       </div>
     </div>
@@ -456,7 +463,11 @@ const AdminSettings = () => {
         <div className="space-y-6">
           {/* Site Logo */}
           <div className="bg-card border rounded-xl p-5">
-            <h3 className="font-bold text-foreground mb-4">সাইট লোগো</h3>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-bold text-foreground">সাইট লোগো</h3>
+              <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 300×80 px</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">হরাইজন্টাল রেশিও (300×80 বা 250×60 px)। ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড PNG বা SVG রিকমেন্ডেড।</p>
             <div className="flex items-center gap-4">
               {logoUrl ? (
                 <div className="relative group">
@@ -476,12 +487,12 @@ const AdminSettings = () => {
                 <label className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild disabled={logoUploading}>
                     <span>
-                      {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "লোগো আপলোড করুন"}
+                      {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "লোগো আপলোড করুন (300×80 px)"}
                     </span>
                   </Button>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]); e.target.value = ""; }} />
                 </label>
-                <p className="text-xs text-muted-foreground mt-1">PNG বা SVG রিকমেন্ডেড। Cloudinary-তে আপলোড হবে।</p>
+                <p className="text-xs text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
               </div>
             </div>
           </div>

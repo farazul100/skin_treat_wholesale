@@ -582,22 +582,26 @@ const AdminProducts = () => {
               <TabsContent value="media" className="space-y-6 mt-4">
                 {/* Images Section */}
                 <div>
-                  <h4 className="font-medium text-sm mb-3 flex items-center gap-2"><Image className="h-4 w-4" /> পণ্যের ছবি</h4>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-medium text-sm flex items-center gap-2"><Image className="h-4 w-4" /> পণ্যের ছবি</h4>
+                    <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 800×800 বা 1000×1000 px</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">১:১ স্কয়ার অনুপাত। কম্পিউটার ও মোবাইল উভয় ডিভাইসেই পণ্য সম্পূর্ণ ও নিখুঁত দেখানোর জন্য আদর্শ সাইজ।</p>
 
                   {/* Upload Area */}
                   <div className="mb-3">
                     {hasCloudinary ? (
                       <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
                         {uploading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <Upload className="h-6 w-6 text-muted-foreground" />}
-                        <span className="text-sm font-medium">{uploading ? "আপলোড হচ্ছে..." : "ক্লিক করুন বা ড্র্যাগ করুন"}</span>
-                        <span className="text-xs text-muted-foreground">PNG, JPG, WEBP — অটো অপটিমাইজ হবে</span>
+                        <span className="text-sm font-medium">{uploading ? "আপলোড হচ্ছে..." : "ক্লিক করুন বা ড্র্যাগ করুন (800×800 px)"}</span>
+                        <span className="text-xs text-muted-foreground">PNG, JPG, WEBP — ১:১ স্কয়ার ছবি অটো অপটিমাইজ হবে</span>
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
                       </label>
                     ) : (
                       <div className="border-2 border-dashed rounded-lg p-6 text-center">
                         <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
                         <p className="text-sm text-muted-foreground">ছবি আপলোড করতে <span className="text-primary font-medium">Settings → Cloudinary</span> সেটআপ করুন</p>
-                        <p className="text-xs text-muted-foreground mt-1">অথবা নিচে URL দিয়ে ছবি যোগ করুন</p>
+                        <p className="text-xs text-muted-foreground mt-1">অথবা নিচে URL দিয়ে ছবি যোগ করুন (সঠিক মাপ: 800×800 px)</p>
                       </div>
                     )}
                   </div>

@@ -96,7 +96,11 @@ const AdminReviews = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>ছবি (৩০০x৩০০)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>রিভিউ ছবি</Label>
+                  <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 400×300 বা 400×400 px</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">৪:৩ বা ১:১ অনুপাত (JPG বা PNG)। গ্রাহকের রিভিউ বা আনবক্সিং ছবি।</p>
                 <div className="mt-2">
                   {imageFile ? (
                     <div className="relative inline-block">
@@ -108,7 +112,8 @@ const AdminReviews = () => {
                   ) : (
                     <label className="flex flex-col items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-primary/40 rounded-lg px-4 py-8 hover:bg-secondary transition-colors">
                       <Upload className="h-8 w-8 text-primary/60" />
-                      <span className="text-sm text-muted-foreground">ছবি আপলোড করুন</span>
+                      <span className="text-sm font-medium text-foreground">ছবি আপলোড করুন (400×300 px)</span>
+                      <span className="text-xs text-muted-foreground">৪:৩ বা স্কয়ার রেশিও</span>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                         if (e.target.files?.[0]) setImageFile(e.target.files[0]);
                       }} />

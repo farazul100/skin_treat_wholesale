@@ -197,8 +197,11 @@ const AdminHeroSlides = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Left: Image Upload & Preview */}
           <div>
-            <Label className="text-sm font-semibold">ব্যানার ছবি *</Label>
-            <p className="text-xs text-muted-foreground mb-2">রেকমেন্ডেড সাইজ: 600×500px বা 4:3 / 1:1 অনুপাত</p>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">ব্যানার ছবি *</Label>
+              <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 600×550 px</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">অনুপাত ১.১:১ বা ৪:৩। সাইড ব্যানার হিসেবে নিখুঁত প্রদর্শনের জন্য রিকমেন্ডেড।</p>
             {promoForm.image_url ? (
               <div className="relative rounded-xl overflow-hidden border bg-muted/30 aspect-[4/3] max-h-56">
                 <img
@@ -288,16 +291,16 @@ const AdminHeroSlides = () => {
       </div>
 
       {/* Main Hero Slider List */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">প্রধান হিরো স্লাইডার ({slides?.length || 0})</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            রেকমেন্ডেড সাইজ: <strong>1400×500px</strong> (ডেস্কটপ), ট্যাব/মোবাইলে অটো ফিট হবে।
+            ওয়েবসাইটের হোমপেইজের প্রধান স্লাইডার ব্যানারসমূহ পরিচালনা করুন।
           </p>
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ image_url: "", link_url: "", title: "", sort_order: 0, is_active: true }); } }}>
           <DialogTrigger asChild>
-            <Button className="gap-1"><Plus className="h-4 w-4" /> স্লাইড যোগ</Button>
+            <Button className="gap-1 shrink-0"><Plus className="h-4 w-4" /> স্লাইড যোগ</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -305,7 +308,15 @@ const AdminHeroSlides = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>ছবি *</Label>
+                <div className="flex items-center justify-between">
+                  <Label>ব্যানার ছবি *</Label>
+                  <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 1920×600 px</span>
+                </div>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 mt-1.5 mb-2 text-[11px] text-muted-foreground space-y-1">
+                  <p className="font-bold text-foreground">ফোন ও পিসি উভয় স্ক্রিনে সম্পূর্ণ দেখানোর টিপস:</p>
+                  <p>• <strong>সঠিক রেজোলিউশন:</strong> ১৯২০ × ৬০০ px (অথবা ১৪০০ × ৪৪০ px)।</p>
+                  <p>• <strong>সেফ জোন (Safe Zone):</strong> মূল লেখা, অফার ও প্রোডাক্ট ব্যানারের <strong>মাঝখানের ৭০% জায়গার মধ্যে</strong> রাখুন। দুই পাশের ১৫% জায়গায় ব্যাকগ্রাউন্ড কালার রাখুন, এতে মোবাইলেও লেখা কেটে যাবে না এবং পিসিতেও সম্পূর্ণ দেখা যাবে।</p>
+                </div>
                 {form.image_url ? (
                   <div className="relative mt-2 rounded-lg overflow-hidden border">
                     <img src={form.image_url} alt="Preview" className="w-full h-40 object-cover" />
@@ -316,7 +327,8 @@ const AdminHeroSlides = () => {
                 ) : (
                   <label className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-secondary/50 transition-colors">
                     {uploading ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 text-muted-foreground" />}
-                    <span className="text-sm text-muted-foreground mt-2">{uploading ? "আপলোড হচ্ছে..." : "ছবি আপলোড করুন (1400×500px)"}</span>
+                    <span className="text-sm font-medium text-foreground mt-2">{uploading ? "আপলোড হচ্ছে..." : "ছবি আপলোড করুন (1920×600 px)"}</span>
+                    <span className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WebP — আল্ট্রা-ওয়াইড অনুপাত ৩.২:১</span>
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = ""; }} />
                   </label>
                 )}
