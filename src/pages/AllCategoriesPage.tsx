@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Layers, Package, ArrowRight, LayoutGrid } from "lucide-react";
+import { Layers, Package, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AllCategoriesPage = () => {
@@ -41,22 +41,8 @@ const AllCategoriesPage = () => {
       <TopBar />
       <Header />
 
-      <main className="flex-1 py-8 md:py-12">
+      <main className="flex-1 py-6 md:py-8">
         <div className="container mx-auto px-4 max-w-7xl">
-          {/* Header section */}
-          <div className="text-center mb-8 md:mb-12">
-            <div className="inline-flex items-center justify-center p-2.5 bg-primary/10 rounded-2xl mb-3 text-primary">
-              <LayoutGrid className="h-6 w-6" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
-              সকল ক্যাটাগরি
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base mt-2 max-w-md mx-auto">
-              আমাদের সকল পণ্যের ক্যাটাগরি ঘুরে দেখুন এবং আপনার পছন্দের পণ্যটি সহজে বেছে নিন।
-            </p>
-            <div className="h-1 w-16 bg-primary rounded-full mt-4 mx-auto" />
-          </div>
-
           {/* Loading State */}
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
