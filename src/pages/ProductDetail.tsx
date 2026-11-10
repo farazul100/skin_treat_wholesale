@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, ArrowLeft, Minus, Plus, ShieldCheck, Truck, Clock, CheckCircle2, Shield, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Video } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Minus, Plus, ShieldCheck, Truck, Clock, CheckCircle2, Shield, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Video, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
@@ -117,6 +117,11 @@ const ProductDetail = () => {
         price: Number(product.price),
         originalPrice: product.original_price ? Number(product.original_price) : undefined,
         image: finalImg,
+        has_gift: Boolean(product.has_gift),
+        gift_title: product.gift_title || "",
+        gift_image: product.gift_image || "",
+        gift_price: Number(product.gift_price || 0),
+        gift_charge_enabled: Boolean(product.gift_charge_enabled),
       },
       quantity
     );
@@ -281,6 +286,59 @@ const ProductDetail = () => {
                 <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                   {product.short_description}
                 </p>
+              )}
+
+              {/* Gift Offer Box if product has gift */}
+              {Boolean(product.has_gift && product.gift_title) && (
+                <div className="mb-5 rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-amber-50/50 p-3.5 sm:p-4 shadow-xs relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs">
+                      <Gift className="h-3.5 w-3.5" />
+                      {product.gift_charge_enabled ? "স্পেশাল গিফট অফার" : "সম্পূর্ণ ফ্রি উপহার"}
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-800">
+                      এই পণ্যের সাথে উপহার অন্তর্ভুক্ত!
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white border border-emerald-200/80 p-1 flex-shrink-0 flex items-center justify-center shadow-xs overflow-hidden">
+                      {product.gift_image ? (
+                        <img
+                          src={product.gift_image}
+                          alt={product.gift_title}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Gift className="h-8 w-8 text-emerald-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm sm:text-base text-foreground line-clamp-1">
+                        {product.gift_title}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {product.gift_charge_enabled ? (
+                          <span className="text-xs font-bold text-primary">
+                            প্যাকেজ মূল্য: +৳{Number(product.gift_price || 0)} (চেকআউটে যোগ হবে)
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="text-muted-foreground line-through">
+                              মূল্য: ৳{Number(product.gift_price || 0)}
+                            </span>
+                            <span className="text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded">
+                              ৳০ (ফ্রি!)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        অর্ডার করলেই মূল পণ্যের সাথে এই আকর্ষণীয় উপহারটি পাঠানো হবে।
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Action Buttons (Row 1: Quantity + Add to Cart | Row 2: ORDER NOW) */}

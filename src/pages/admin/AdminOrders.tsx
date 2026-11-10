@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ArchiveRestore, Archive, Search, Eye, X, Truck, Loader2, Printer } from "lucide-react";
+import { Plus, Trash2, ArchiveRestore, Archive, Search, Eye, X, Truck, Loader2, Printer, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -737,7 +737,20 @@ const AdminOrders = () => {
                   <TableBody>
                     {viewOrder.order_items?.map((item: any) => (
                       <TableRow key={item.id}>
-                        <TableCell className="text-sm">{item.product_name}</TableCell>
+                        <TableCell className="text-sm">
+                          <div className="font-medium text-foreground">{item.product_name}</div>
+                          {Boolean((item.has_gift === 1 || item.has_gift === true) && item.gift_title) && (
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md w-fit font-medium">
+                              <Gift className="h-3 w-3 text-emerald-600 shrink-0" />
+                              <span>উপহার: {item.gift_title}</span>
+                              {Boolean(item.gift_charge_enabled === 1 || item.gift_charge_enabled === true) ? (
+                                <span className="font-bold text-primary">(+৳{Number(item.gift_price)})</span>
+                              ) : (
+                                <span className="text-emerald-700 font-bold">(সম্পূর্ণ ফ্রি)</span>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-center">{item.quantity}</TableCell>
                         <TableCell className="text-sm text-right">৳{Number(item.price)}</TableCell>
                         <TableCell className="text-sm text-right font-medium">৳{Number(item.total)}</TableCell>

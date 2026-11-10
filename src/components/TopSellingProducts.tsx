@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
-import { ShoppingCart, Flame, Zap } from "lucide-react";
+import { ShoppingCart, Flame, Zap, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TopSellingProducts = () => {
@@ -50,6 +50,11 @@ const TopSellingProducts = () => {
       price: Number(p.price),
       originalPrice: p.original_price ? Number(p.original_price) : undefined,
       image: getProductImage(p),
+      has_gift: Boolean(p.has_gift),
+      gift_title: p.gift_title || "",
+      gift_image: p.gift_image || "",
+      gift_price: Number(p.gift_price || 0),
+      gift_charge_enabled: Boolean(p.gift_charge_enabled),
     });
     toast.success(`${p.name} কার্টে যোগ হয়েছে`);
   };
@@ -63,6 +68,11 @@ const TopSellingProducts = () => {
       price: Number(p.price),
       originalPrice: p.original_price ? Number(p.original_price) : undefined,
       image: getProductImage(p),
+      has_gift: Boolean(p.has_gift),
+      gift_title: p.gift_title || "",
+      gift_image: p.gift_image || "",
+      gift_price: Number(p.gift_price || 0),
+      gift_charge_enabled: Boolean(p.gift_charge_enabled),
     });
     navigate("/checkout");
   };
@@ -103,13 +113,19 @@ const TopSellingProducts = () => {
                 )}
 
                 {/* Product Image - compact on mobile, larger & taller on desktop */}
-                <div className="w-full aspect-square md:w-48 md:h-48 lg:w-56 lg:h-56 bg-slate-50/70 rounded-lg md:rounded-xl overflow-hidden shrink-0 flex items-center justify-center p-2 md:p-3 border border-slate-100">
+                <div className="w-full aspect-square md:w-48 md:h-48 lg:w-56 lg:h-56 bg-slate-50/70 rounded-lg md:rounded-xl overflow-hidden shrink-0 flex items-center justify-center p-2 md:p-3 border border-slate-100 relative">
                   <img
                     src={prodImg}
                     alt={product.name}
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
+                  {Boolean(product.has_gift && product.gift_title) && (
+                    <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs flex items-center gap-1 z-10">
+                      <Gift className="h-2.5 w-2.5" />
+                      <span>{product.gift_charge_enabled ? "গিফট অফার" : "ফ্রি গিফট"}</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Product Details */}

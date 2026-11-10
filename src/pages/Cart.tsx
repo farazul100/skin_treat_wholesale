@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, Gift } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -41,9 +41,45 @@ const Cart = () => {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm text-foreground line-clamp-2">{item.name}</h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="font-bold text-primary">৳{item.price}</span>
+                      <span className="font-bold text-primary">
+                        ৳{Number(item.price) + ((item.has_gift && item.gift_charge_enabled) ? Number(item.gift_price || 0) : 0)}
+                      </span>
                       {item.originalPrice && <span className="text-xs text-muted-foreground line-through">৳{item.originalPrice}</span>}
                     </div>
+
+                    {/* Gift Offer Box */}
+                    {Boolean(item.has_gift && item.gift_title) && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md p-1.5 flex items-center gap-2 mt-2">
+                        <div className="w-7 h-7 rounded bg-white flex-shrink-0 flex items-center justify-center overflow-hidden border border-emerald-200">
+                          {item.gift_image ? (
+                            <img src={item.gift_image} alt="" className="w-full h-full object-contain" />
+                          ) : (
+                            <Gift className="h-3.5 w-3.5 text-emerald-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-white bg-emerald-600 px-1 py-0.2 rounded">
+                              {item.gift_charge_enabled ? "🎁 গিফট" : "🎁 ফ্রি উপহার"}
+                            </span>
+                            <span className="text-xs font-semibold text-foreground truncate">{item.gift_title}</span>
+                          </div>
+                          <div className="text-[10px] mt-0.5">
+                            {item.gift_charge_enabled ? (
+                              <span className="text-primary font-bold">
+                                +৳{Number(item.gift_price || 0)} (মূল্যে অন্তর্ভুক্ত)
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <span className="line-through text-muted-foreground">৳{Number(item.gift_price || 0)}</span>
+                                <span className="font-bold text-emerald-700 bg-emerald-100 px-1 rounded">৳০ (ফ্রি!)</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-lg">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
@@ -70,6 +106,16 @@ const Cart = () => {
                   <span className="text-muted-foreground">সাবটোটাল</span>
                   <span>৳{totalPrice}</span>
                 </div>
+                {items.some(i => i.has_gift && !i.gift_charge_enabled && Number(i.gift_price) > 0) && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Gift className="h-3.5 w-3.5" /> ফ্রি উপহার সেভিংস
+                    </span>
+                    <span>
+                      -৳{items.reduce((s, it) => s + ((it.has_gift && !it.gift_charge_enabled ? Number(it.gift_price || 0) : 0) * it.quantity), 0)} (ফ্রি)
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ডেলিভারি চার্জ</span>
                   <span className="text-muted-foreground">চেকআউটে</span>

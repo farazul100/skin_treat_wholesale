@@ -38,7 +38,14 @@ const InvoiceSlip = ({ order, logoUrl, brandName = "Natural Shefa", brandPhone }
         <div className="slip-items">
           {items.slice(0, 3).map((it: any, i: number) => (
             <div key={i} className="slip-item">
-              <span className="slip-item-name">{it.product_name}</span>
+              <span className="slip-item-name">
+                {it.product_name}
+                {Boolean((it.has_gift === 1 || it.has_gift === true) && it.gift_title) && (
+                  <span style={{ color: "#1b5e1e", fontWeight: "bold" }}>
+                    {" "}(🎁 {it.gift_title})
+                  </span>
+                )}
+              </span>
               <span className="slip-item-qty">×{it.quantity}</span>
             </div>
           ))}

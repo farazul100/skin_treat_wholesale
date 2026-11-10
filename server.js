@@ -106,7 +106,7 @@ async function ensureCategoryColumns() {
 }
 ensureCategoryColumns();
 
-// Auto-ensure products.is_bestseller column exists
+// Auto-ensure products.is_bestseller and gift columns exist
 async function ensureProductColumns() {
   try {
     await pool.query('ALTER TABLE products ADD COLUMN is_bestseller TINYINT(1) DEFAULT 0;');
@@ -116,6 +116,20 @@ async function ensureProductColumns() {
       console.log("Note on is_bestseller column:", err.message);
     }
   }
+
+  // Gift feature columns for products
+  try { await pool.query('ALTER TABLE products ADD COLUMN has_gift TINYINT(1) DEFAULT 0;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN gift_title VARCHAR(255) NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN gift_image TEXT NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN gift_price DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN gift_charge_enabled TINYINT(1) DEFAULT 0;'); } catch (e) {}
+
+  // Gift feature columns for order_items
+  try { await pool.query('ALTER TABLE order_items ADD COLUMN has_gift TINYINT(1) DEFAULT 0;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_title VARCHAR(255) NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_image TEXT NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_price DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_charge_enabled TINYINT(1) DEFAULT 0;'); } catch (e) {}
 }
 ensureProductColumns();
 

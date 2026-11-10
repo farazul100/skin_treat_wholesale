@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Copy, Package, CheckSquare, Square, Upload, Video, Image, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Copy, Package, CheckSquare, Square, Upload, Video, Image, Loader2, GripVertical, Gift } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyProduct = {
@@ -20,6 +20,11 @@ const emptyProduct = {
   is_separate_delivery: false as boolean,
   payment_requirement: "cod" as string,
   landing_page_html: "",
+  has_gift: false as boolean,
+  gift_title: "",
+  gift_image: "",
+  gift_price: 0 as number,
+  gift_charge_enabled: false as boolean,
 };
 
 const extractYouTubeId = (url?: string): string | null => {
@@ -48,6 +53,7 @@ const AdminProducts = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [uploading, setUploading] = useState(false);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [giftUploading, setGiftUploading] = useState(false);
 
   const { data: products } = useQuery({
     queryKey: ["admin-products"],
@@ -129,6 +135,24 @@ const AdminProducts = () => {
       toast.error(err.message || "ভিডিও আপলোড ব্যর্থ");
     } finally {
       setVideoUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleGiftImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGiftUploading(true);
+    try {
+      const result = await uploadToCloudinary(file, "image");
+      if (result?.secure_url) {
+        setForm(prev => ({ ...prev, gift_image: result.secure_url }));
+        toast.success("উপহারের ছবি আপলোড হয়েছে");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "গিফট ছবি আপলোড ব্যর্থ");
+    } finally {
+      setGiftUploading(false);
       e.target.value = "";
     }
   };
@@ -249,6 +273,11 @@ const AdminProducts = () => {
       is_separate_delivery: product.is_separate_delivery === true || product.is_separate_delivery === 1 || product.is_separate_delivery === "1",
       payment_requirement: product.payment_requirement || "cod",
       landing_page_html: product.landing_page_html || "",
+      has_gift: product.has_gift === true || product.has_gift === 1 || product.has_gift === "1",
+      gift_title: product.gift_title || "",
+      gift_image: product.gift_image || "",
+      gift_price: Number(product.gift_price || 0),
+      gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
     });
     setActiveTab("general");
     setOpen(true);
@@ -270,6 +299,11 @@ const AdminProducts = () => {
       is_separate_delivery: product.is_separate_delivery === true || product.is_separate_delivery === 1 || product.is_separate_delivery === "1",
       payment_requirement: product.payment_requirement || "cod",
       landing_page_html: product.landing_page_html || "",
+      has_gift: product.has_gift === true || product.has_gift === 1 || product.has_gift === "1",
+      gift_title: product.gift_title || "",
+      gift_image: product.gift_image || "",
+      gift_price: Number(product.gift_price || 0),
+      gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
     });
     setActiveTab("general");
     setOpen(true);
@@ -407,9 +441,14 @@ const AdminProducts = () => {
                       {product.name}
                     </button>
                     <div className="text-xs text-muted-foreground mt-0.5">/{product.slug}</div>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {product.is_featured && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">ফিচার্ড</Badge>}
                       {product.is_bestseller && <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] px-1.5 py-0">টপ সেলিং</Badge>}
+                      {Boolean(product.has_gift && product.gift_title) && (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] px-1.5 py-0 flex items-center gap-1 font-medium">
+                          <Gift className="h-2.5 w-2.5" /> গিফট: {product.gift_title} {product.gift_charge_enabled ? `(+৳${product.gift_price})` : '(ফ্রি)'}
+                        </Badge>
+                      )}
                       {product.badge && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.badge}</Badge>}
                     </div>
                   </td>
@@ -471,12 +510,13 @@ const AdminProducts = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+              <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto flex-wrap">
                 {[
                   { value: "general", label: "সাধারণ" },
                   { value: "description", label: "বিবরণ" },
                   { value: "landing", label: "ল্যান্ডিং পেজ ডিজাইন" },
                   { value: "media", label: "মিডিয়া", icon: <Image className="h-3.5 w-3.5" /> },
+                  { value: "gift", label: "গিফট অফার", icon: <Gift className="h-3.5 w-3.5 text-primary" /> },
                   { value: "inventory", label: "ইনভেন্টরি" },
                   { value: "delivery", label: "ডেলিভারি ও পেমেন্ট" },
                   { value: "seo", label: "SEO" },
@@ -485,6 +525,9 @@ const AdminProducts = () => {
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm gap-1.5">
                     {t.icon}
                     {t.label}
+                    {t.value === "gift" && form.has_gift && (
+                      <span className="ml-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">চালু</span>
+                    )}
                     {t.value === "seo" && form.focus_keyword && (
                       <span className={`ml-1 text-[10px] font-bold ${seoColor}`}>{seoScore}%</span>
                     )}
@@ -743,6 +786,192 @@ const AdminProducts = () => {
                     </div>
                   )}
                 </div>
+              </TabsContent>
+
+              {/* Gift Offer Tab */}
+              <TabsContent value="gift" className="space-y-5 mt-4">
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-primary" />
+                      <Label className="text-sm font-bold text-foreground">এই প্রোডাক্টের সাথে স্পেশাল গিফট অফার চালু করুন</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      চালু করলে প্রোডাক্ট পেজে এবং চেকআউটে আকর্ষণীয় গিফট বক্স/অফার প্রদর্শন করবে।
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.has_gift}
+                    onCheckedChange={(v) => setForm({ ...form, has_gift: v })}
+                  />
+                </div>
+
+                {form.has_gift ? (
+                  <div className="space-y-5 border rounded-xl p-5 bg-card shadow-xs animate-in fade-in-50">
+                    {/* Gift Title */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="text-xs font-semibold block text-foreground">উপহারের নাম (গিফট টাইটেল) *</Label>
+                        <span className="text-[11px] text-muted-foreground">যেমন: প্রিমিয়াম গোল্ডেন স্পুন / ফেস মাস্ক</span>
+                      </div>
+                      <Input
+                        value={form.gift_title}
+                        onChange={(e) => setForm({ ...form, gift_title: e.target.value })}
+                        placeholder="যেমন: প্রিমিয়াম অর্গানিক উডেন স্পুন"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Gift Price */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Label className="text-xs font-semibold block text-foreground">গিফটের বাজার মূল্য (৳)</Label>
+                          <span className="text-[11px] text-primary font-medium">রেগুলার প্রাইজ</span>
+                        </div>
+                        <Input
+                          type="number"
+                          value={form.gift_price || ""}
+                          onChange={(e) => setForm({ ...form, gift_price: e.target.value ? +e.target.value : 0 })}
+                          placeholder="যেমন: 350"
+                        />
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          উপহারটির আনুমানিক বা বাজার মূল্য (চেকআউটে প্রদর্শন হবে)।
+                        </p>
+                      </div>
+
+                      {/* Gift Charge Option Toggle */}
+                      <div className="rounded-xl border p-3.5 bg-secondary/30 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Label className="text-xs font-bold text-foreground block">দাম কাউন্ট হবে কি না?</Label>
+                            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                              {form.gift_charge_enabled ? (
+                                <span className="text-primary font-medium">
+                                  ✅ <strong>মূল্য যোগ হবে:</strong> চেকআউটে মূল প্রোডাক্টের দামের সাথে এই ৳{form.gift_price || 0} যোগ হবে।
+                                </span>
+                              ) : (
+                                <span className="text-emerald-700 font-medium">
+                                  🎁 <strong>সম্পূর্ণ ফ্রি:</strong> চেকআউটে মূল্য কেটে দেখাবে (যেমন: ~~৳{form.gift_price || 0}~~ ফ্রি!), কোনো অতিরিক্ত টাকা নেওয়া হবে না।
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={form.gift_charge_enabled}
+                            onCheckedChange={(v) => setForm({ ...form, gift_charge_enabled: v })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gift Image Upload */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="text-xs font-semibold text-foreground">গিফটের ছবি</Label>
+                        <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 400×400 px (১:১ স্কয়ার)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        স্বচ্ছ ব্যাকগ্রাউন্ডের (PNG বা WebP) অথবা স্পষ্ট গিফটের ছবি আপলোড করুন।
+                      </p>
+
+                      {form.gift_image ? (
+                        <div className="relative inline-block border rounded-xl overflow-hidden p-1.5 bg-muted/20">
+                          <img
+                            src={form.gift_image}
+                            alt="Gift Preview"
+                            className="w-28 h-28 object-contain rounded-lg bg-white"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2.5 right-2.5 h-6 w-6 rounded-full shadow-md"
+                            onClick={() => setForm({ ...form, gift_image: "" })}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                            {giftUploading ? (
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            ) : (
+                              <Upload className="h-6 w-6 text-muted-foreground" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {giftUploading ? "আপলোড হচ্ছে..." : "গিফটের ছবি আপলোড করুন (400×400 px)"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">PNG, JPG, WEBP — ক্লিক করে ফাইল সিলেক্ট করুন</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleGiftImageUpload}
+                              disabled={giftUploading}
+                            />
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="অথবা সরাসরি ইমেজ লিংক (URL) দিন: https://..."
+                              value={form.gift_image}
+                              onChange={(e) => setForm({ ...form, gift_image: e.target.value })}
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Live Preview Box */}
+                    <div className="border border-dashed border-emerald-500/40 rounded-xl p-4 bg-emerald-500/5 mt-4">
+                      <p className="text-xs font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+                        <Gift className="h-3.5 w-3.5" /> গ্রাহক যেভাবে গিফট অফার দেখতে পাবেন (লাইভ প্রিভিউ):
+                      </p>
+                      <div className="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-2xs">
+                        <div className="w-14 h-14 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                          {form.gift_image ? (
+                            <img src={form.gift_image} alt="" className="w-full h-full object-contain" />
+                          ) : (
+                            <Gift className="h-7 w-7 text-emerald-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-600 text-white rounded">
+                              {form.gift_charge_enabled ? "🎁 স্পেশাল গিফট প্যাক" : "🎁 সম্পূর্ণ ফ্রি গিফট"}
+                            </span>
+                          </div>
+                          <h5 className="font-semibold text-xs sm:text-sm text-foreground truncate mt-0.5">
+                            {form.gift_title || "উপহারের নাম এখানে দেখাবে"}
+                          </h5>
+                          <div className="text-xs mt-0.5 flex items-center gap-2">
+                            {form.gift_charge_enabled ? (
+                              <span className="font-bold text-primary">
+                                +৳{Number(form.gift_price || 0)} (চেকআউটে মূল্যে যোগ হবে)
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-muted-foreground line-through">
+                                  ৳{Number(form.gift_price || 0)}
+                                </span>
+                                <span className="font-bold text-emerald-600">
+                                  ৳০ (ফ্রি অফার!)
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-xl">
+                    <Gift className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm font-medium">এই পণ্যের জন্য বর্তমানে কোনো গিফট অফার নির্ধারণ করা নেই</p>
+                    <p className="text-xs text-muted-foreground mt-1">উপরে সুইচটি চালু করে ছবি ও সঠিক দাম সহ আকর্ষণীয় গিফট অফার সেট করুন</p>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Inventory Tab */}

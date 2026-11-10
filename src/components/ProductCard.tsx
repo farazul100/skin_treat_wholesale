@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ShoppingCart, Zap } from "lucide-react";
+import { ShoppingCart, Zap, Gift } from "lucide-react";
 
 interface ProductCardProps {
   id?: string;
@@ -13,9 +13,14 @@ interface ProductCardProps {
   badge?: string;
   slug?: string;
   categoryName?: string;
+  has_gift?: boolean;
+  gift_title?: string;
+  gift_image?: string;
+  gift_price?: number;
+  gift_charge_enabled?: boolean;
 }
 
-const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categoryName }: ProductCardProps) => {
+const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categoryName, has_gift, gift_title, gift_image, gift_price, gift_charge_enabled }: ProductCardProps) => {
   const { addItem } = useCart();
   const navigate = useNavigate();
 
@@ -45,14 +50,36 @@ const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categ
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id: id || name, name, price, originalPrice, image: finalImage });
+    addItem({
+      id: id || name,
+      name,
+      price,
+      originalPrice,
+      image: finalImage,
+      has_gift,
+      gift_title,
+      gift_image,
+      gift_price,
+      gift_charge_enabled,
+    });
     toast.success(`${name} কার্টে যোগ হয়েছে`);
   };
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({ id: id || name, name, price, originalPrice, image: finalImage });
+    addItem({
+      id: id || name,
+      name,
+      price,
+      originalPrice,
+      image: finalImage,
+      has_gift,
+      gift_title,
+      gift_image,
+      gift_price,
+      gift_charge_enabled,
+    });
     navigate("/checkout");
   };
 
@@ -78,6 +105,14 @@ const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categ
         {badge && (
           <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded shadow-xs">
             {badge}
+          </span>
+        )}
+
+        {/* Gift Badge */}
+        {has_gift && gift_title && (
+          <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs flex items-center gap-1 z-10">
+            <Gift className="h-2.5 w-2.5" />
+            <span>{gift_charge_enabled ? "গিফট অফার" : "ফ্রি গিফট"}</span>
           </span>
         )}
       </div>

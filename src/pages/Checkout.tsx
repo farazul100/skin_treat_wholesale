@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShoppingCart, Minus, Plus, Trash2, AlertTriangle, AlertCircle, Loader2 } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, AlertTriangle, AlertCircle, Loader2, Gift } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -215,7 +215,17 @@ const Checkout = () => {
       customer_phone: currentForm.phone?.trim() || null,
       shipping_address: currentForm.address?.trim() || null,
       city: city === "dhaka" ? "ঢাকার ভেতর" : "ঢাকার বাইরে",
-      cart_items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+      cart_items: items.map(i => ({ 
+        id: i.id, 
+        name: i.name, 
+        price: i.price, 
+        quantity: i.quantity,
+        has_gift: i.has_gift,
+        gift_title: i.gift_title,
+        gift_image: i.gift_image,
+        gift_price: i.gift_price,
+        gift_charge_enabled: i.gift_charge_enabled,
+      })),
       cart_total: totalPrice,
       last_activity: new Date().toISOString(),
     };
@@ -339,15 +349,24 @@ const Checkout = () => {
 
       const finalOrderId = order?.id || orderId;
 
-      const orderItems = items.map((item) => ({
-        id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        order_id: finalOrderId,
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.price * item.quantity,
-      }));
+      const orderItems = items.map((item) => {
+        const giftExtra = (item.has_gift && item.gift_charge_enabled) ? Number(item.gift_price || 0) : 0;
+        const effectivePrice = Number(item.price) + giftExtra;
+        return {
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          order_id: finalOrderId,
+          product_id: item.id,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: effectivePrice,
+          total: effectivePrice * item.quantity,
+          has_gift: item.has_gift ? 1 : 0,
+          gift_title: item.gift_title || null,
+          gift_image: item.gift_image || null,
+          gift_price: Number(item.gift_price || 0),
+          gift_charge_enabled: item.gift_charge_enabled ? 1 : 0,
+        };
+      });
 
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
@@ -639,63 +658,120 @@ const Checkout = () => {
               {/* Order Summary */}
               <div className="bg-card border rounded-xl p-5 h-fit sticky top-4">
                 <h3 className="font-bold text-foreground mb-4">অর্ডার সারাংশ</h3>
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex gap-2.5 text-sm bg-secondary/20 p-2.5 rounded-lg border border-border/60 items-center">
-                      <div className="w-12 h-12 rounded-md overflow-hidden bg-white border border-border/50 flex-shrink-0 flex items-center justify-center p-0.5">
-                        <img
-                          src={resolveItemImage(item.image)}
-                          alt={item.name}
-                          onError={(e) => {
-                            e.currentTarget.src = "/placeholder.svg";
-                          }}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="line-clamp-1 font-medium text-foreground text-xs sm:text-sm">{item.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">৳{item.price} x {item.quantity}</p>
-                        
-                        {/* Quantity Stepper & Remove Controls */}
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex items-center border border-border/80 rounded-md bg-background">
-                            <button
-                              type="button"
-                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-l-md transition-colors cursor-pointer"
-                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                              title="পরিমাণ কমান"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="w-7 text-center text-xs font-semibold">{item.quantity}</span>
-                            <button
-                              type="button"
-                              className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-r-md transition-colors cursor-pointer"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              title="পরিমাণ বাড়ান"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {items.map((item) => {
+                    const giftExtra = (item.has_gift && item.gift_charge_enabled) ? Number(item.gift_price || 0) : 0;
+                    const itemUnitPrice = Number(item.price) + giftExtra;
+                    const itemRowTotal = itemUnitPrice * item.quantity;
 
-                          <button
-                            type="button"
-                            className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors cursor-pointer"
-                            onClick={() => removeItem(item.id)}
-                            title="মুছে ফেলুন"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                    return (
+                      <div key={item.id} className="flex flex-col gap-2 text-sm bg-secondary/20 p-2.5 rounded-lg border border-border/60">
+                        <div className="flex gap-2.5 items-center">
+                          <div className="w-12 h-12 rounded-md overflow-hidden bg-white border border-border/50 flex-shrink-0 flex items-center justify-center p-0.5">
+                            <img
+                              src={resolveItemImage(item.image)}
+                              alt={item.name}
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.svg";
+                              }}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="line-clamp-1 font-medium text-foreground text-xs sm:text-sm">{item.name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              ৳{item.price}
+                              {giftExtra > 0 && <span className="text-primary font-semibold"> + ৳{giftExtra} (উপহার)</span>}
+                              {" "}x {item.quantity}
+                            </p>
+                            
+                            {/* Quantity Stepper & Remove Controls */}
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <div className="flex items-center border border-border/80 rounded-md bg-background">
+                                <button
+                                  type="button"
+                                  className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-l-md transition-colors cursor-pointer"
+                                  onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                                  title="পরিমাণ কমান"
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="w-7 text-center text-xs font-semibold">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-r-md transition-colors cursor-pointer"
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  title="পরিমাণ বাড়ান"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors cursor-pointer"
+                                onClick={() => removeItem(item.id)}
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <span className="font-bold text-foreground text-sm flex-shrink-0">
+                            ৳{itemRowTotal}
+                          </span>
                         </div>
+
+                        {/* Gift Info Card if product has gift */}
+                        {Boolean(item.has_gift && item.gift_title) && (
+                          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-md p-2 flex items-center gap-2.5 mt-0.5">
+                            <div className="w-9 h-9 rounded bg-white flex-shrink-0 flex items-center justify-center overflow-hidden border border-emerald-200 p-0.5 shadow-2xs">
+                              {item.gift_image ? (
+                                <img src={resolveItemImage(item.gift_image)} alt="" className="w-full h-full object-contain" />
+                              ) : (
+                                <Gift className="h-4 w-4 text-emerald-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold text-white bg-emerald-600 px-1.5 py-0.2 rounded flex items-center gap-1">
+                                  <Gift className="h-2.5 w-2.5" />
+                                  {item.gift_charge_enabled ? "স্পেশাল গিফট" : "ফ্রি উপহার"}
+                                </span>
+                                <span className="text-xs font-semibold text-foreground truncate">{item.gift_title}</span>
+                              </div>
+                              <div className="text-[11px] mt-0.5">
+                                {item.gift_charge_enabled ? (
+                                  <span className="text-primary font-bold">
+                                    +৳{Number(item.gift_price || 0)} (মূল্যের সাথে যোগ হয়েছে)
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-muted-foreground line-through font-medium">৳{Number(item.gift_price || 0)}</span>
+                                    <span className="font-bold text-emerald-700 bg-emerald-100 px-1 rounded">৳০ (ফ্রি!)</span>
+                                    <span className="text-[10px] text-muted-foreground">({Number(item.gift_price || 0)} টাকার গিফট ফ্রি পাচ্ছেন)</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className="font-bold text-foreground text-sm flex-shrink-0">
-                        ৳{item.price * item.quantity}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="border-t mt-4 pt-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">সাবটোটাল</span><span>৳{totalPrice}</span></div>
+                  {items.some(i => i.has_gift && !i.gift_charge_enabled && Number(i.gift_price) > 0) && (
+                    <div className="flex justify-between text-emerald-600 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Gift className="h-3.5 w-3.5" /> ফ্রি গিফট সেভিংস
+                      </span>
+                      <span>
+                        -৳{items.reduce((s, it) => s + ((it.has_gift && !it.gift_charge_enabled ? Number(it.gift_price || 0) : 0) * it.quantity), 0)} (ফ্রি)
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between"><span className="text-muted-foreground">ডেলিভারি চার্জ</span><span>৳{deliveryCharge}</span></div>
                   {paymentMethod !== "cod" && partialAmount > 0 && paymentMethod !== "eps" && (
                     <div className="flex justify-between text-primary"><span>অ্যাডভান্স পেমেন্ট</span><span>৳{partialAmount}</span></div>
