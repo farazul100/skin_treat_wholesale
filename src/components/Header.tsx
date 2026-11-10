@@ -70,7 +70,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b shadow-sm">
+    <header className="sticky top-0 z-50 bg-background border-b-0 md:border-b shadow-none md:shadow-sm">
       <div className="container mx-auto px-4 max-w-[1536px]">
         {/* Mobile Layout */}
         <div className="flex md:hidden items-center justify-between h-16">
@@ -203,7 +203,7 @@ const Header = () => {
 
       {/* Categories Bar Below Header */}
       {categories && categories.length > 0 && (
-        <div className="bg-[#09241d] text-white border-t border-white/10 shadow-xs relative">
+        <div className="bg-[#09241d] text-white border-t border-white/10 shadow-none md:shadow-xs relative">
           <div className="container mx-auto px-4 max-w-[1536px]">
             <nav
               aria-label="Category Navigation"
