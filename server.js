@@ -28,10 +28,19 @@ if (!fs.existsSync(uploadDir)) {
 app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
   const filePath = path.join(uploadDir, req.params.filename);
   if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send('File not found');
+    return res.sendFile(filePath);
   }
+  // Graceful fallback: If an older DB reference or crawled image is missing on disk,
+  // return the verified og-image.png instead of a hard 404, so Telegram/social bots never fail
+  const distOg = path.join(__dirname, 'dist', 'og-image.png');
+  const pubOg = path.join(__dirname, 'public', 'og-image.png');
+  const fallback = fs.existsSync(distOg) ? distOg : (fs.existsSync(pubOg) ? pubOg : null);
+  if (fallback) {
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.sendFile(fallback);
+  }
+  res.status(404).send('File not found');
 });
 
 // Configure multer (memory storage for sharp processing)
@@ -1070,6 +1079,35 @@ function toAbsoluteUrl(url, base, proto = 'https') {
   return `${base}/${trimmed}`;
 }
 
+// Check if an image actually exists on disk or is accessible before putting into og:image
+function isImageAccessible(imgUrl) {
+  if (!imgUrl || typeof imgUrl !== 'string') return false;
+  const trimmed = imgUrl.trim();
+  if (!trimmed) return false;
+
+  // External URL (Cloudinary, Imgur, S3, etc.)
+  if (/^https?:\/\//i.test(trimmed)) {
+    // If it points back to our own uploads/ path, check disk
+    if (trimmed.includes('/uploads/')) {
+      const filename = path.basename(trimmed.split('?')[0]);
+      return fs.existsSync(path.join(uploadDir, filename));
+    }
+    return true;
+  }
+
+  // Local uploads path
+  if (trimmed.includes('/uploads/')) {
+    const filename = path.basename(trimmed.split('?')[0]);
+    return fs.existsSync(path.join(uploadDir, filename));
+  }
+
+  // Static files in dist or public (like /og-image.png, /placeholder.svg)
+  const rel = trimmed.replace(/^\//, '');
+  const staticPath = path.join(__dirname, 'dist', rel);
+  const publicPath = path.join(__dirname, 'public', rel);
+  return fs.existsSync(staticPath) || fs.existsSync(publicPath);
+}
+
 // Dedicated Open Graph banner routes with explicit mime types
 app.get('/og-image.png', (req, res) => {
   const pngPath = path.join(__dirname, 'dist', 'og-image.png');
@@ -1187,46 +1225,51 @@ app.use(async (req, res) => {
               }
             }
           }
-          if (pImg) {
+          if (pImg && isImageAccessible(pImg)) {
             pageImage = toAbsoluteUrl(pImg, baseUrl, proto);
           }
         }
       } catch (_) {}
     }
 
-    // If not a product page or product has no image: extract homepage theme visual
+    // If not a product page or product has no accessible image: extract homepage theme visual
     if (!pageImage) {
-      // 1. Custom OG Banner from Admin Settings if uploaded
-      if (customOgBanner) {
+      // 1. Custom OG Banner from Admin Settings if uploaded and verified accessible
+      if (customOgBanner && isImageAccessible(customOgBanner)) {
         pageImage = toAbsoluteUrl(customOgBanner, baseUrl, proto);
       }
 
-      // 2. Main Hero Slide from the Homepage theme
+      // 2. Main Hero Slide from the Homepage theme (verified accessible on server disk)
       if (!pageImage) {
         try {
           const [slides] = await pool.query(
-            "SELECT image_url, title FROM hero_slides WHERE is_active = 1 OR is_active = true ORDER BY sort_order ASC, created_at DESC LIMIT 1"
+            "SELECT image_url, title FROM hero_slides WHERE is_active = 1 OR is_active = true ORDER BY sort_order ASC, created_at DESC"
           );
-          if (slides && slides.length > 0 && slides[0].image_url) {
-            pageImage = toAbsoluteUrl(slides[0].image_url, baseUrl, proto);
-            if (!storeDesc && slides[0].title) {
-              pageDesc = `${slides[0].title} - ${storeTitle}`;
+          if (slides && slides.length > 0) {
+            for (const s of slides) {
+              if (s.image_url && isImageAccessible(s.image_url)) {
+                pageImage = toAbsoluteUrl(s.image_url, baseUrl, proto);
+                if (!storeDesc && s.title) {
+                  pageDesc = `${s.title} - ${storeTitle}`;
+                }
+                break;
+              }
             }
           }
         } catch (_) {}
       }
 
-      // 3. Hero Promo Banner on Homepage
-      if (!pageImage && heroPromoBanner) {
+      // 3. Hero Promo Banner on Homepage (verified accessible)
+      if (!pageImage && heroPromoBanner && isImageAccessible(heroPromoBanner)) {
         pageImage = toAbsoluteUrl(heroPromoBanner, baseUrl, proto);
       }
 
-      // 4. Store Logo
-      if (!pageImage && storeLogo) {
+      // 4. Store Logo (verified accessible)
+      if (!pageImage && storeLogo && isImageAccessible(storeLogo)) {
         pageImage = toAbsoluteUrl(storeLogo, baseUrl, proto);
       }
 
-      // 5. Default fallback
+      // 5. Guaranteed verified fallback (always returns 200 OK image/png)
       if (!pageImage) {
         pageImage = `${baseUrl}/og-image.png`;
       }
