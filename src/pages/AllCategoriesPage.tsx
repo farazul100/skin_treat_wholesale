@@ -45,9 +45,9 @@ const AllCategoriesPage = () => {
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
               {[...Array(12)].map((_, i) => (
-                <div key={i} className="bg-card rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-border/50 animate-pulse space-y-3">
-                  <div className="w-full aspect-square bg-muted rounded-lg" />
-                  <div className="h-3.5 bg-muted rounded w-3/4 mx-auto" />
+                <div key={i} className="bg-white dark:bg-card rounded-xl p-3 sm:p-4 border border-gray-200/80 animate-pulse space-y-3">
+                  <div className="w-full aspect-square bg-muted/50 rounded-lg" />
+                  <div className="h-3.5 bg-muted/60 rounded w-3/4 mx-auto" />
                 </div>
               ))}
             </div>
@@ -70,24 +70,24 @@ const AllCategoriesPage = () => {
                   to={`/category/${cat.slug}`}
                   className="group block h-full"
                 >
-                  <div className="bg-card rounded-xl sm:rounded-2xl border-2 border-border/60 hover:border-primary p-3 sm:p-4 flex flex-col items-center justify-between h-full transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-lg hover:shadow-primary/10 cursor-pointer">
-                    {/* Image with zoom animation */}
-                    <div className="w-full aspect-square flex items-center justify-center p-2 sm:p-3 overflow-hidden rounded-lg bg-secondary/10">
+                  <div className="bg-white dark:bg-card rounded-xl border border-gray-200/90 dark:border-border hover:border-primary dark:hover:border-primary hover:ring-1 hover:ring-primary p-3 sm:p-4 flex flex-col items-center justify-between h-full transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                    {/* Clean Image Container - no gray background box */}
+                    <div className="w-full aspect-square flex items-center justify-center p-2 overflow-hidden">
                       {cat.image || cat.image_url ? (
                         <img
                           src={cat.image || cat.image_url}
                           alt={cat.name}
-                          className="w-full h-full object-contain transition-transform duration-300 ease-out group-hover:scale-110"
+                          className="w-full h-full object-contain transition-transform duration-300 ease-out group-hover:scale-105"
                           loading="lazy"
                         />
                       ) : (
-                        <Layers className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/40 group-hover:text-primary transition-colors duration-300" />
+                        <Layers className="h-12 w-12 text-muted-foreground/30 group-hover:text-primary transition-colors duration-200" />
                       )}
                     </div>
 
                     {/* Category Title */}
-                    <div className="mt-2.5 sm:mt-3 text-center w-full px-1">
-                      <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors duration-200 line-clamp-2 leading-tight block">
+                    <div className="mt-2 text-center w-full px-1">
+                      <span className="text-xs sm:text-sm text-gray-800 dark:text-foreground group-hover:text-primary transition-colors duration-200 line-clamp-2 leading-snug font-normal block">
                         {cat.name}
                       </span>
                     </div>
