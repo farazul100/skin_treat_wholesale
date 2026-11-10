@@ -57,8 +57,8 @@ const HeroBanner = () => {
 
   if (slidesLoading || promoLoading) {
     return (
-      <section className="bg-background py-2 md:py-3">
-        <div className="container mx-auto px-4 max-w-[1536px]">
+      <section className="bg-background py-0 md:py-3">
+        <div className="w-full md:container mx-auto px-0 md:px-4 max-w-[1536px]">
           <div className="w-full bg-muted animate-pulse rounded-none aspect-[2.1/1] max-h-[420px]" />
         </div>
       </section>
@@ -72,9 +72,9 @@ const HeroBanner = () => {
   const hasPromo = Boolean(promoSetting?.enabled && promoSetting?.image_url);
 
   return (
-    <section className="bg-background py-2 md:py-3">
-      <div className="container mx-auto px-4 max-w-[1536px]">
-        <div className="flex flex-col lg:flex-row gap-3 md:gap-4 items-stretch">
+    <section className="bg-background py-0 md:py-3">
+      <div className="w-full md:container mx-auto px-0 md:px-4 max-w-[1536px]">
+        <div className="flex flex-col lg:flex-row gap-0 lg:gap-4 items-stretch">
           {/* Main Hero Slider */}
           <div
             className={`w-full ${
