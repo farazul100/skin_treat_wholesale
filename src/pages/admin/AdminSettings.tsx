@@ -60,6 +60,70 @@ const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMuta
   );
 };
 
+const SocialShareBannerUpload = ({ settings, updateMutation }: { settings: any; updateMutation: any }) => {
+  const [ogUrl, setOgUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (settings?.og_banner) setOgUrl(settings.og_banner.value?.url || "");
+    else if (settings?.social_share_banner) setOgUrl(settings.social_share_banner.value?.url || "");
+  }, [settings]);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const result = await res.json();
+      setOgUrl(result.secure_url);
+      updateMutation.mutate({ key: "og_banner", value: { url: result.secure_url } });
+      toast.success("সোশ্যাল শেয়ার ব্যানার আপডেট হয়েছে");
+    } catch {
+      toast.error("ব্যানার আপলোড ব্যর্থ");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border rounded-xl p-5">
+      <h3 className="font-bold text-foreground mb-1">সোশ্যাল শেয়ার প্রিভিউ ব্যানার (WhatsApp, Telegram, Facebook)</h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        কাউকে লিংক পাঠালে এই ব্যানারটি প্রিভিউ কার্ড হিসেবে যাবে। খালি রাখলে হোমপেইজের সক্রিয় স্লাইডার ব্যানারটি স্বয়ংক্রিয়ভাবে দেখাবে।
+      </p>
+      <div className="space-y-4">
+        {ogUrl ? (
+          <div className="relative group max-w-md">
+            <img src={ogUrl} alt="Social Share Banner" className="w-full h-36 object-cover rounded-lg border shadow-sm" />
+            <button
+              onClick={() => { setOgUrl(""); updateMutation.mutate({ key: "og_banner", value: { url: "" } }); }}
+              className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="মুছে ফেলুন"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="border-2 border-dashed rounded-lg p-5 text-center text-muted-foreground max-w-md bg-muted/20">
+            <Upload className="h-6 w-6 mx-auto mb-1 opacity-60" />
+            <p className="text-xs">কোনো কাস্টম ব্যানার আপলোড নেই — হোমপেইজের সক্রিয় স্লাইডার ব্যানারটি স্বয়ংক্রিয়ভাবে প্রিভিউ হবে।</p>
+          </div>
+        )}
+        <div>
+          <label className="cursor-pointer">
+            <Button variant="outline" size="sm" asChild disabled={uploading}>
+              <span>{uploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "কাস্টম শেয়ার ব্যানার আপলোড করুন"}</span>
+            </Button>
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]); e.target.value = ""; }} />
+          </label>
+          <p className="text-xs text-muted-foreground mt-1">১২০০ × ৬৩০ পিক্সেল (JPG বা PNG) রিকমেন্ডেড।</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ChangeAdminPassword = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -424,6 +488,9 @@ const AdminSettings = () => {
 
           {/* Favicon */}
           <FaviconUpload settings={settings} updateMutation={updateMutation} />
+
+          {/* Social Share / OG Preview Banner */}
+          <SocialShareBannerUpload settings={settings} updateMutation={updateMutation} />
 
           {/* Site Title & Store Name */}
           <div className="bg-card border rounded-xl p-5">

@@ -1043,6 +1043,33 @@ app.delete('/api/:table', async (req, res) => {
   }
 });
 
+// Helpers for dynamic social link preview metadata
+function escapeHtmlAttr(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function toAbsoluteUrl(url, base, proto = 'https') {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('//')) {
+    return `${proto}:${trimmed}`;
+  }
+  if (trimmed.startsWith('/')) {
+    return `${base}${trimmed}`;
+  }
+  return `${base}/${trimmed}`;
+}
+
 // Dedicated Open Graph banner routes with explicit mime types
 app.get('/og-image.png', (req, res) => {
   const pngPath = path.join(__dirname, 'dist', 'og-image.png');
@@ -1066,6 +1093,7 @@ app.get('/og-image.jpg', (req, res) => {
 app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
 // The "catchall" handler: dynamically inject absolute OG metadata for WhatsApp/Telegram/Facebook link previews
+// Automatically shows whatever is on the homepage in the theme (active hero slider, store title, or product details)
 app.use(async (req, res) => {
   const indexPath = path.join(__dirname, 'dist', 'index.html');
   if (!fs.existsSync(indexPath)) {
@@ -1079,14 +1107,19 @@ app.use(async (req, res) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.headers['x-forwarded-host'] || req.get('host') || 'sunnahly.com';
     const baseUrl = `${proto}://${host}`;
-    const currentUrl = `${baseUrl}${req.originalUrl || req.url || '/'}`;
+    const cleanPath = req.path || '/';
+    const currentUrl = `${baseUrl}${req.originalUrl || cleanPath}`;
 
-    // Read store settings for dynamic title and logo if present in DB
+    // Read store settings from database
     let storeTitle = '';
+    let storeDesc = '';
     let storeLogo = '';
+    let customOgBanner = '';
+    let heroPromoBanner = '';
+
     try {
       const [settings] = await pool.query(
-        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_logo')"
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_logo', 'site_description', 'og_banner', 'social_share_banner', 'hero_promo_banner')"
       );
       if (settings && settings.length > 0) {
         settings.forEach(s => {
@@ -1094,30 +1127,139 @@ app.use(async (req, res) => {
             const parsed = typeof s.setting_value === 'string' ? JSON.parse(s.setting_value) : s.setting_value;
             if (s.setting_key === 'site_title' && parsed?.title) storeTitle = parsed.title;
             if (s.setting_key === 'site_logo' && parsed?.url) storeLogo = parsed.url;
+            if (s.setting_key === 'site_description' && (parsed?.description || parsed?.text)) storeDesc = parsed.description || parsed.text;
+            if ((s.setting_key === 'og_banner' || s.setting_key === 'social_share_banner') && parsed?.url) customOgBanner = parsed.url;
+            if (s.setting_key === 'hero_promo_banner' && (parsed?.image_url || parsed?.url)) heroPromoBanner = parsed.image_url || parsed.url;
           } catch (_) {}
         });
       }
     } catch (_) {}
 
-    const ogImgUrl = `${baseUrl}/og-image.png`;
-
-    if (storeTitle) {
-      html = html.replace(/<title>.*?<\/title>/i, `<title>${storeTitle}</title>`);
-      html = html.replace(/<meta property="og:title" content="[^"]*"/gi, `<meta property="og:title" content="${storeTitle}"`);
-      html = html.replace(/<meta name="twitter:title" content="[^"]*"/gi, `<meta name="twitter:title" content="${storeTitle}"`);
+    // Fallback store title from domain if not yet configured
+    if (!storeTitle) {
+      const cleanHost = host.split(':')[0].replace(/^www\./i, '');
+      const parts = cleanHost.split('.');
+      if (parts.length > 0 && parts[0]) {
+        storeTitle = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      } else {
+        storeTitle = 'Online Shop';
+      }
     }
 
-    // Ensure og:url is current full URL
-    html = html.replace(/<meta property="og:url" content="[^"]*"/gi, `<meta property="og:url" content="${currentUrl}"`);
-    html = html.replace(/<meta name="twitter:url" content="[^"]*"/gi, `<meta name="twitter:url" content="${currentUrl}"`);
+    let pageTitle = storeTitle;
+    let pageDesc = storeDesc || `${storeTitle} - সেরা মানের পণ্য ও দ্রুত হোম ডেলিভারি। অর্ডার করতে ভিজিট করুন।`;
+    let pageImage = '';
 
-    // Ensure absolute OG image URLs
-    html = html.replace(/<meta property="og:image" content="[^"]*"/gi, `<meta property="og:image" content="${ogImgUrl}"`);
-    html = html.replace(/<meta property="og:image:secure_url" content="[^"]*"/gi, `<meta property="og:image:secure_url" content="${ogImgUrl}"`);
-    html = html.replace(/<meta name="twitter:image" content="[^"]*"/gi, `<meta name="twitter:image" content="${ogImgUrl}"`);
+    // Check if user is sharing a specific product link: /product/:id or /product/:slug or /products/:id
+    const productMatch = cleanPath.match(/^\/(?:product|products)\/([a-zA-Z0-9_-]+)/i);
+    if (productMatch) {
+      const productParam = productMatch[1];
+      try {
+        const [prodRows] = await pool.query(
+          "SELECT name, slug, description, short_description, price, images FROM products WHERE id = ? OR slug = ? LIMIT 1",
+          [productParam, productParam]
+        );
+        if (prodRows && prodRows.length > 0) {
+          const prod = prodRows[0];
+          pageTitle = `${prod.name} | ${storeTitle}`;
 
-    // Clean up any remaining lovable references
-    html = html.replace(/https:\/\/lovable\.dev[^\s"'>]*/gi, ogImgUrl);
+          if (prod.short_description) {
+            pageDesc = prod.short_description;
+          } else if (prod.description) {
+            const plain = prod.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            pageDesc = plain.slice(0, 160) + (plain.length > 160 ? '...' : '');
+          } else if (prod.price) {
+            pageDesc = `মূল্য: ৳${prod.price}। এখনই অর্ডার করুন ${storeTitle}-এ।`;
+          }
+
+          // Parse product image
+          let pImg = '';
+          if (prod.images) {
+            if (Array.isArray(prod.images)) {
+              pImg = prod.images[0];
+            } else if (typeof prod.images === 'string') {
+              try {
+                const parsed = JSON.parse(prod.images);
+                if (Array.isArray(parsed) && parsed.length > 0) pImg = parsed[0];
+                else if (typeof parsed === 'string') pImg = parsed;
+              } catch (_) {
+                pImg = prod.images.split(',')[0].trim();
+              }
+            }
+          }
+          if (pImg) {
+            pageImage = toAbsoluteUrl(pImg, baseUrl, proto);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // If not a product page or product has no image: extract homepage theme visual
+    if (!pageImage) {
+      // 1. Custom OG Banner from Admin Settings if uploaded
+      if (customOgBanner) {
+        pageImage = toAbsoluteUrl(customOgBanner, baseUrl, proto);
+      }
+
+      // 2. Main Hero Slide from the Homepage theme
+      if (!pageImage) {
+        try {
+          const [slides] = await pool.query(
+            "SELECT image_url, title FROM hero_slides WHERE is_active = 1 OR is_active = true ORDER BY sort_order ASC, created_at DESC LIMIT 1"
+          );
+          if (slides && slides.length > 0 && slides[0].image_url) {
+            pageImage = toAbsoluteUrl(slides[0].image_url, baseUrl, proto);
+            if (!storeDesc && slides[0].title) {
+              pageDesc = `${slides[0].title} - ${storeTitle}`;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Hero Promo Banner on Homepage
+      if (!pageImage && heroPromoBanner) {
+        pageImage = toAbsoluteUrl(heroPromoBanner, baseUrl, proto);
+      }
+
+      // 4. Store Logo
+      if (!pageImage && storeLogo) {
+        pageImage = toAbsoluteUrl(storeLogo, baseUrl, proto);
+      }
+
+      // 5. Default fallback
+      if (!pageImage) {
+        pageImage = `${baseUrl}/og-image.png`;
+      }
+    }
+
+    // Determine MIME type
+    let imgMimeType = 'image/png';
+    if (/\.jpe?g(\?.*)?$/i.test(pageImage)) imgMimeType = 'image/jpeg';
+    else if (/\.webp(\?.*)?$/i.test(pageImage)) imgMimeType = 'image/webp';
+    else if (/\.gif(\?.*)?$/i.test(pageImage)) imgMimeType = 'image/gif';
+
+    // Inject dynamic metadata into HTML
+    html = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtmlAttr(pageTitle)}</title>`);
+    html = html.replace(/<meta name="description" content="[^"]*"/gi, `<meta name="description" content="${escapeHtmlAttr(pageDesc)}"`);
+    html = html.replace(/<meta name="author" content="[^"]*"/gi, `<meta name="author" content="${escapeHtmlAttr(storeTitle)}"`);
+
+    // Open Graph
+    html = html.replace(/<meta property="og:title" content="[^"]*"/gi, `<meta property="og:title" content="${escapeHtmlAttr(pageTitle)}"`);
+    html = html.replace(/<meta property="og:description" content="[^"]*"/gi, `<meta property="og:description" content="${escapeHtmlAttr(pageDesc)}"`);
+    html = html.replace(/<meta property="og:url" content="[^"]*"/gi, `<meta property="og:url" content="${escapeHtmlAttr(currentUrl)}"`);
+    html = html.replace(/<meta property="og:image" content="[^"]*"/gi, `<meta property="og:image" content="${pageImage}"`);
+    html = html.replace(/<meta property="og:image:secure_url" content="[^"]*"/gi, `<meta property="og:image:secure_url" content="${pageImage}"`);
+    html = html.replace(/<meta property="og:image:type" content="[^"]*"/gi, `<meta property="og:image:type" content="${imgMimeType}"`);
+    html = html.replace(/<meta property="og:image:alt" content="[^"]*"/gi, `<meta property="og:image:alt" content="${escapeHtmlAttr(pageTitle)}"`);
+
+    // Twitter
+    html = html.replace(/<meta name="twitter:title" content="[^"]*"/gi, `<meta name="twitter:title" content="${escapeHtmlAttr(pageTitle)}"`);
+    html = html.replace(/<meta name="twitter:description" content="[^"]*"/gi, `<meta name="twitter:description" content="${escapeHtmlAttr(pageDesc)}"`);
+    html = html.replace(/<meta name="twitter:url" content="[^"]*"/gi, `<meta name="twitter:url" content="${escapeHtmlAttr(currentUrl)}"`);
+    html = html.replace(/<meta name="twitter:image" content="[^"]*"/gi, `<meta name="twitter:image" content="${pageImage}"`);
+
+    // Clean up any remaining third-party lovable references
+    html = html.replace(/https:\/\/lovable\.dev[^\s"'>]*/gi, pageImage);
 
     res.send(html);
   } catch (err) {
