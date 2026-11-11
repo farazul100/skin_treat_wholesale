@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Upload, Loader2, Trash2, Copy, ExternalLink, ShieldCheck, Eye, EyeOff, CreditCard, RefreshCw, Download } from "lucide-react";
+import { applyThemeColor } from "@/lib/theme";
 
 const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMutation: any }) => {
   const [faviconUrl, setFaviconUrl] = useState("");
@@ -492,6 +493,9 @@ const AdminSettings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["theme-color"] });
+      queryClient.invalidateQueries({ queryKey: ["site-favicon"] });
+      queryClient.invalidateQueries({ queryKey: ["site-title"] });
       toast.success("সেটিংস আপডেট হয়েছে");
     },
   });
@@ -571,19 +575,33 @@ const AdminSettings = () => {
                   <input
                     type="color"
                     value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setThemeColor(val);
+                      applyThemeColor(val);
+                    }}
                     className="h-10 w-16 rounded-md border border-input cursor-pointer bg-background"
                   />
                   <Input
                     placeholder="#1f7a2e"
                     value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setThemeColor(val);
+                      applyThemeColor(val);
+                    }}
                     className="flex-1"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">HEX কোড দিন (যেমন: #1f7a2e)। সেভ করার পর পরিবর্তন তৎক্ষণাৎ দেখা যাবে।</p>
               </div>
-              <Button variant="outline" onClick={() => updateMutation.mutate({ key: "theme_color", value: { primary_hex: themeColor } })}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  applyThemeColor(themeColor);
+                  updateMutation.mutate({ key: "theme_color", value: { primary_hex: themeColor } });
+                }}
+              >
                 সেভ করুন
               </Button>
             </div>
