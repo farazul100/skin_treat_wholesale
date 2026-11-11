@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Upload, Loader2, Trash2, Copy, ExternalLink, ShieldCheck, Eye, EyeOff, CreditCard, RefreshCw } from "lucide-react";
+import { Upload, Loader2, Trash2, Copy, ExternalLink, ShieldCheck, Eye, EyeOff, CreditCard, RefreshCw, Download } from "lucide-react";
 
 const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMutation: any }) => {
   const [faviconUrl, setFaviconUrl] = useState("");
@@ -220,10 +220,21 @@ const ChangeAdminPassword = () => {
 };
 
 const MetaCatalogFeedCard = () => {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "rogjosgrwrlblpslmocr";
-  const base = `https://${projectId}.supabase.co/functions/v1/meta-catalog-feed`;
-  const csvUrl = `${base}?format=csv`;
-  const xmlUrl = `${base}?format=xml`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const csvUrl = `${origin}/api/meta-catalog-feed?format=csv`;
+  const xmlUrl = `${origin}/api/meta-catalog-feed?format=xml`;
+  const downloadCsvUrl = `${origin}/api/meta-catalog-feed?format=csv&download=1`;
+
+  // Fetch real-time count of active products currently in store
+  const { data: activeProducts, isLoading } = useQuery({
+    queryKey: ["meta-catalog-active-products-count"],
+    queryFn: async () => {
+      const { data } = await supabase.from("products").select("id").eq("is_active", true);
+      return data || [];
+    },
+  });
+
+  const activeCount = activeProducts?.length || 0;
 
   const copy = async (url: string, label: string) => {
     try {
@@ -235,32 +246,63 @@ const MetaCatalogFeedCard = () => {
   };
 
   return (
-    <div className="bg-card border rounded-xl p-5">
-      <h3 className="font-bold text-foreground mb-1">Meta Catalog Feed</h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        Facebook/Instagram Catalog Ads (Advantage+ / Multi-product) চালানোর জন্য নিচের URL টি Meta Commerce Manager-এ Data Feed হিসেবে দিন। সব active প্রোডাক্ট অটোমেটিক যুক্ত হবে।
-      </p>
-
-      <div className="space-y-3">
+    <div className="bg-card border rounded-xl p-5 space-y-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Label>CSV Feed URL (Recommended)</Label>
-          <div className="flex gap-2 mt-1">
-            <Input value={csvUrl} readOnly className="flex-1 text-xs font-mono" onFocus={(e) => e.target.select()} />
-            <Button type="button" variant="outline" size="icon" onClick={() => copy(csvUrl, "CSV")} title="কপি">
-              <Copy className="h-4 w-4" />
+          <h3 className="font-bold text-foreground text-base">Meta Catalog Dynamic Feed</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Facebook ও Instagram Advantage+ Catalog Ads-এর জন্য ১০০% ডাইনামিক লাইভ প্রোডাক্ট ফিড।
+          </p>
+        </div>
+        <a href={downloadCsvUrl} download="meta-catalog.csv" className="inline-flex">
+          <Button type="button" size="sm" className="gap-1.5 font-medium shadow-xs">
+            <Download className="h-4 w-4" /> সরাসরি CSV ডাউনলোড করুন
+          </Button>
+        </a>
+      </div>
+
+      {/* Dynamic Status Banner */}
+      <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-900 dark:text-emerald-300">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <span className="font-semibold">
+            ডাইনামিক ফিড সক্রিয়: বর্তমানে আপনার স্টোরের {isLoading ? "..." : activeCount}টি একটিভ প্রোডাক্ট এই ফিডে লাইভ যুক্ত আছে।
+          </span>
+        </div>
+        <span className="text-[11px] text-muted-foreground hidden sm:inline">
+          (স্টোরে প্রোডাক্ট যোগ বা পরিবর্তন হলে সাথে সাথে আপডেট হবে)
+        </span>
+      </div>
+
+      <div className="space-y-3 pt-1">
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <Label className="text-xs font-semibold">CSV Feed URL (Recommended for Meta)</Label>
+            <span className="text-[11px] text-primary font-medium">রিয়েল-টাইম ডাটা ফেচ</span>
+          </div>
+          <div className="flex gap-2">
+            <Input value={csvUrl} readOnly className="flex-1 text-xs font-mono bg-muted/30" onFocus={(e) => e.target.select()} />
+            <Button type="button" variant="outline" size="sm" onClick={() => copy(csvUrl, "CSV")} className="gap-1 text-xs" title="URL কপি করুন">
+              <Copy className="h-3.5 w-3.5" /> কপি
             </Button>
-            <Button type="button" variant="outline" size="icon" asChild title="ব্রাউজারে দেখুন">
+            <Button type="button" variant="outline" size="icon" asChild title="ব্রাউজারে সরাসরি দেখুন">
               <a href={csvUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+            </Button>
+            <Button type="button" variant="secondary" size="icon" asChild title="CSV ফাইল ডাউনলোড">
+              <a href={downloadCsvUrl} download="meta-catalog.csv"><Download className="h-4 w-4" /></a>
             </Button>
           </div>
         </div>
 
         <div>
-          <Label>XML Feed URL (Google Shopping format)</Label>
-          <div className="flex gap-2 mt-1">
-            <Input value={xmlUrl} readOnly className="flex-1 text-xs font-mono" onFocus={(e) => e.target.select()} />
-            <Button type="button" variant="outline" size="icon" onClick={() => copy(xmlUrl, "XML")} title="কপি">
-              <Copy className="h-4 w-4" />
+          <div className="flex items-center justify-between mb-1">
+            <Label className="text-xs font-semibold">XML Feed URL (Google Shopping & RSS format)</Label>
+            <span className="text-[11px] text-muted-foreground">বিকল্প ফরম্যাট</span>
+          </div>
+          <div className="flex gap-2">
+            <Input value={xmlUrl} readOnly className="flex-1 text-xs font-mono bg-muted/30" onFocus={(e) => e.target.select()} />
+            <Button type="button" variant="outline" size="sm" onClick={() => copy(xmlUrl, "XML")} className="gap-1 text-xs" title="URL কপি করুন">
+              <Copy className="h-3.5 w-3.5" /> কপি
             </Button>
             <Button type="button" variant="outline" size="icon" asChild title="ব্রাউজারে দেখুন">
               <a href={xmlUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
@@ -268,14 +310,14 @@ const MetaCatalogFeedCard = () => {
           </div>
         </div>
 
-        <div className="bg-secondary/40 rounded-lg p-3 text-xs text-muted-foreground space-y-1.5">
-          <p className="font-semibold text-foreground">কীভাবে ব্যবহার করবেন:</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li><a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="text-primary underline">Meta Commerce Manager</a> খুলুন → Catalog → Data Sources</li>
-            <li><strong>Add Items → Use Bulk Upload → Scheduled Feed</strong> সিলেক্ট করুন</li>
-            <li>উপরের <strong>CSV URL</strong> পেস্ট করুন (auth লাগবে না — public)</li>
-            <li>Schedule: Daily সিলেক্ট করুন → Currency: BDT → Save</li>
-            <li>Catalog তৈরি হলে Ads Manager-এ Catalog Sales / Advantage+ Catalog campaign চালু করুন</li>
+        <div className="bg-secondary/40 rounded-lg p-3 text-xs text-muted-foreground space-y-1.5 border">
+          <p className="font-semibold text-foreground">কীভাবে Meta Commerce Manager-এ সেট করবেন:</p>
+          <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+            <li><a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">Meta Commerce Manager</a> খুলুন → <strong>Catalog → Data Sources</strong>-এ যান।</li>
+            <li><strong>Add Items → Use Bulk Upload → Scheduled Feed</strong> সিলেক্ট করুন।</li>
+            <li>উপরের <strong>CSV Feed URL</strong> টি কপি করে পেস্ট করুন (কোনো ইউজারনেম/পাসওয়ার্ড লাগবে না)।</li>
+            <li><strong>Schedule: Daily / Hourly</strong> সিলেক্ট করুন → <strong>Default Currency: BDT</strong> দিন → Save করুন।</li>
+            <li>ক্যাটালগ সিন্ক সম্পন্ন হলে ফেসবুক/ইনস্টাগ্রাম অ্যাডস ম্যানেজারে Catalog Sales বা Dynamic Product Ads ক্যাম্পেইন চালান। স্টোরে নতুন প্রোডাক্ট দিলে বা দাম পরিবর্তন হলে মেটা স্বয়ংক্রিয়ভাবে প্রতিদিন এই URL থেকে আপডেট নিয়ে নেবে!</li>
           </ol>
         </div>
       </div>

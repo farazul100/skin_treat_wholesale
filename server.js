@@ -341,6 +341,218 @@ app.get('/api/categories', async (req, res, next) => {
   }
 });
 
+// Meta (Facebook) & Google Catalog Dynamic Product Feed (CSV & XML)
+const handleMetaCatalogFeed = async (req, res) => {
+  try {
+    const format = (req.query.format || 'csv').toLowerCase();
+    const isDownload = req.query.download === '1' || req.query.download === 'true';
+
+    // 1. Determine site origin
+    const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:5000';
+    let siteOrigin = `${protocol}://${host}`;
+
+    // 2. Fetch store name & site_url setting if available
+    let storeName = 'Sunnahly';
+    try {
+      const [settings] = await pool.query(
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_url', 'store_name')"
+      );
+      if (settings && settings.length > 0) {
+        settings.forEach(s => {
+          try {
+            const parsed = typeof s.setting_value === 'string' ? JSON.parse(s.setting_value) : s.setting_value;
+            if (s.setting_key === 'site_title' && parsed?.title) storeName = parsed.title;
+            if (s.setting_key === 'store_name' && (parsed?.name || typeof parsed === 'string')) storeName = parsed.name || parsed;
+            if (s.setting_key === 'site_url' && parsed?.url) siteOrigin = parsed.url.replace(/\/$/, '');
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    // Fallback brand name from host if generic
+    if (!storeName || storeName === 'Sunnahly') {
+      const cleanHost = host.split(':')[0].replace(/^www\./i, '');
+      const parts = cleanHost.split('.');
+      if (parts.length > 0 && parts[0] && parts[0] !== 'localhost') {
+        storeName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      }
+    }
+
+    // 3. Query all currently active products with their categories dynamically
+    const [products] = await pool.query(`
+      SELECT p.*, c.name as category_name, c.slug as category_slug
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.is_active = 1
+      ORDER BY p.sort_order ASC, p.created_at DESC
+    `);
+
+    // Helper: strip HTML
+    const stripHtml = (html) => {
+      if (!html) return '';
+      return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    };
+
+    // Helper: resolve primary image to absolute URL
+    const resolveImageUrl = (img) => {
+      if (!img) return `${siteOrigin}/placeholder.svg`;
+      let first = '';
+      if (Array.isArray(img)) {
+        first = img[0];
+      } else if (typeof img === 'string') {
+        try {
+          const parsed = JSON.parse(img);
+          if (Array.isArray(parsed) && parsed[0]) first = parsed[0];
+          else if (typeof parsed === 'string') first = parsed;
+        } catch (_) {
+          first = img.split(',')[0].trim();
+        }
+      }
+      if (!first) return `${siteOrigin}/placeholder.svg`;
+      first = String(first).trim();
+      if (first.startsWith('http://') || first.startsWith('https://')) return first;
+      if (first.startsWith('/')) return `${siteOrigin}${first}`;
+      return `${siteOrigin}/${first}`;
+    };
+
+    // Helper: RFC 4180 CSV escaping
+    const csvField = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      if (/[",\n\r]/.test(s)) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    // XML escaping
+    const xmlEscape = (v) => {
+      if (v === null || v === undefined) return '';
+      return String(v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    };
+
+    if (format === 'xml') {
+      const items = products.map((p) => {
+        const image = resolveImageUrl(p.images);
+        const link = `${siteOrigin}/product/${p.slug || p.id}`;
+        const desc = stripHtml(p.description) || stripHtml(p.short_description) || p.name;
+        const stockQty = Number(p.stock) || 0;
+        const availability = stockQty > 0 ? 'in stock' : 'out of stock';
+        const price = Number(p.price) || 0;
+        const origPrice = p.original_price ? Number(p.original_price) : 0;
+        const hasSale = origPrice > price;
+        const fullPriceStr = `${(hasSale ? origPrice : price).toFixed(2)} BDT`;
+        const salePriceStr = hasSale ? `${price.toFixed(2)} BDT` : '';
+        const catName = p.category_name || 'Health & Beauty';
+
+        return `    <item>
+      <g:id>${xmlEscape(p.id)}</g:id>
+      <g:title>${xmlEscape(p.name)}</g:title>
+      <g:description>${xmlEscape(desc.slice(0, 5000))}</g:description>
+      <g:link>${xmlEscape(link)}</g:link>
+      <g:image_link>${xmlEscape(image)}</g:image_link>
+      <g:availability>${availability}</g:availability>
+      <g:price>${xmlEscape(fullPriceStr)}</g:price>${salePriceStr ? `\n      <g:sale_price>${xmlEscape(salePriceStr)}</g:sale_price>` : ''}
+      <g:condition>new</g:condition>
+      <g:brand>${xmlEscape(storeName)}</g:brand>
+      <g:google_product_category>${xmlEscape(catName)}</g:google_product_category>
+      <g:identifier_exists>no</g:identifier_exists>
+    </item>`;
+      }).join('\n');
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>${xmlEscape(storeName)} Product Catalog Feed</title>
+    <link>${xmlEscape(siteOrigin)}</link>
+    <description>Dynamic live product catalog for Meta Commerce and Google Shopping</description>
+${items}
+  </channel>
+</rss>`;
+
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      if (isDownload) {
+        res.setHeader('Content-Disposition', `attachment; filename="${storeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-catalog.xml"`);
+      } else {
+        res.setHeader('Content-Disposition', 'inline; filename="catalog.xml"');
+      }
+      return res.send(xml);
+    }
+
+    // Default: CSV format (Meta Commerce Catalog specification)
+    const headers = [
+      'id',
+      'title',
+      'description',
+      'availability',
+      'condition',
+      'price',
+      'sale_price',
+      'link',
+      'image_link',
+      'brand',
+      'google_product_category',
+      'quantity_to_sell_on_facebook'
+    ];
+
+    const rows = products.map((p) => {
+      const image = resolveImageUrl(p.images);
+      const link = `${siteOrigin}/product/${p.slug || p.id}`;
+      const desc = stripHtml(p.description) || stripHtml(p.short_description) || p.name;
+      const stockQty = Number(p.stock) || 0;
+      const availability = stockQty > 0 ? 'in stock' : 'out of stock';
+      const price = Number(p.price) || 0;
+      const origPrice = p.original_price ? Number(p.original_price) : 0;
+      const hasSale = origPrice > price;
+      const priceStr = `${(hasSale ? origPrice : price).toFixed(2)} BDT`;
+      const salePriceStr = hasSale ? `${price.toFixed(2)} BDT` : '';
+      const catName = p.category_name || 'Health & Beauty';
+
+      return [
+        p.id,
+        p.name,
+        desc.slice(0, 5000),
+        availability,
+        'new',
+        priceStr,
+        salePriceStr,
+        link,
+        image,
+        storeName,
+        catName,
+        Math.max(0, stockQty)
+      ].map(csvField).join(',');
+    });
+
+    // UTF-8 BOM (\uFEFF) ensures Excel, Google Sheets, and Meta correctly render Bengali script without corruption
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    if (isDownload) {
+      res.setHeader('Content-Disposition', `attachment; filename="${storeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-catalog.csv"`);
+    } else {
+      res.setHeader('Content-Disposition', 'inline; filename="meta-catalog.csv"');
+    }
+    return res.send(csvContent);
+  } catch (error) {
+    console.error('Meta catalog feed error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+app.get('/api/meta-catalog-feed', handleMetaCatalogFeed);
+app.get('/meta-catalog-feed', handleMetaCatalogFeed);
+app.get('/api/catalog.csv', (req, res, next) => { req.query.format = 'csv'; handleMetaCatalogFeed(req, res, next); });
+app.get('/api/catalog.xml', (req, res, next) => { req.query.format = 'xml'; handleMetaCatalogFeed(req, res, next); });
+
 app.get('/api/debug_info', (req, res) => {
   res.json({
     dirname: __dirname,
