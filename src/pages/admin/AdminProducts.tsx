@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Copy, Package, CheckSquare, Square, Upload, Video, Image, Loader2, GripVertical, Gift } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Copy, Package, CheckSquare, Square, Upload, Video, Image, Loader2, GripVertical, Gift, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyProduct = {
@@ -25,6 +25,12 @@ const emptyProduct = {
   gift_image: "",
   gift_price: 0 as number,
   gift_charge_enabled: false as boolean,
+  coupon_enabled: false as boolean,
+  coupon_code: "",
+  coupon_discount_type: "fixed" as "fixed" | "percentage",
+  coupon_discount_value: 0 as number,
+  coupon_min_spend: 0 as number,
+  coupon_expiry_date: "",
 };
 
 const extractYouTubeId = (url?: string): string | null => {
@@ -278,6 +284,12 @@ const AdminProducts = () => {
       gift_image: product.gift_image || "",
       gift_price: Number(product.gift_price || 0),
       gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
+      coupon_enabled: product.coupon_enabled === true || product.coupon_enabled === 1 || product.coupon_enabled === "1",
+      coupon_code: product.coupon_code || "",
+      coupon_discount_type: (product.coupon_discount_type || "fixed") as "fixed" | "percentage",
+      coupon_discount_value: Number(product.coupon_discount_value || 0),
+      coupon_min_spend: Number(product.coupon_min_spend || 0),
+      coupon_expiry_date: product.coupon_expiry_date || "",
     });
     setActiveTab("general");
     setOpen(true);
@@ -304,6 +316,12 @@ const AdminProducts = () => {
       gift_image: product.gift_image || "",
       gift_price: Number(product.gift_price || 0),
       gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
+      coupon_enabled: product.coupon_enabled === true || product.coupon_enabled === 1 || product.coupon_enabled === "1",
+      coupon_code: product.coupon_code ? `${product.coupon_code}_COPY` : "",
+      coupon_discount_type: (product.coupon_discount_type || "fixed") as "fixed" | "percentage",
+      coupon_discount_value: Number(product.coupon_discount_value || 0),
+      coupon_min_spend: Number(product.coupon_min_spend || 0),
+      coupon_expiry_date: product.coupon_expiry_date || "",
     });
     setActiveTab("general");
     setOpen(true);
@@ -449,6 +467,11 @@ const AdminProducts = () => {
                           <Gift className="h-2.5 w-2.5" /> গিফট: {product.gift_title} {product.gift_charge_enabled ? `(+৳${product.gift_price})` : '(ফ্রি)'}
                         </Badge>
                       )}
+                      {Boolean(product.coupon_enabled && product.coupon_code) && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] px-1.5 py-0 flex items-center gap-1 font-medium font-mono">
+                          <Tag className="h-2.5 w-2.5" /> {product.coupon_code} ({product.coupon_discount_type === "percentage" ? `${product.coupon_discount_value}%` : `৳${product.coupon_discount_value}`})
+                        </Badge>
+                      )}
                       {product.badge && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.badge}</Badge>}
                     </div>
                   </td>
@@ -517,6 +540,7 @@ const AdminProducts = () => {
                   { value: "landing", label: "ল্যান্ডিং পেজ ডিজাইন" },
                   { value: "media", label: "মিডিয়া", icon: <Image className="h-3.5 w-3.5" /> },
                   { value: "gift", label: "গিফট অফার", icon: <Gift className="h-3.5 w-3.5 text-primary" /> },
+                  { value: "coupon", label: "কুপন কোড", icon: <Tag className="h-3.5 w-3.5 text-primary" /> },
                   { value: "inventory", label: "ইনভেন্টরি" },
                   { value: "delivery", label: "ডেলিভারি ও পেমেন্ট" },
                   { value: "seo", label: "SEO" },
@@ -527,6 +551,9 @@ const AdminProducts = () => {
                     {t.label}
                     {t.value === "gift" && form.has_gift && (
                       <span className="ml-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">চালু</span>
+                    )}
+                    {t.value === "coupon" && form.coupon_enabled && (
+                      <span className="ml-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded-full">চালু</span>
                     )}
                     {t.value === "seo" && form.focus_keyword && (
                       <span className={`ml-1 text-[10px] font-bold ${seoColor}`}>{seoScore}%</span>
@@ -972,6 +999,131 @@ const AdminProducts = () => {
                     <p className="text-xs text-muted-foreground mt-1">উপরে সুইচটি চালু করে ছবি ও সঠিক দাম সহ আকর্ষণীয় গিফট অফার সেট করুন</p>
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Coupon Tab */}
+              <TabsContent value="coupon" className="space-y-5 mt-4">
+                <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-bold text-foreground">এই পণ্যের জন্য কুপন কোড ছাড় চালু করুন</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        চালু করলে গ্রাহক কার্টে বা চেকআউটে নির্দিষ্ট কুপন কোড দিয়ে ছাড় (Discount) উপভোগ করতে পারবেন।
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.coupon_enabled}
+                      onCheckedChange={(v) => setForm({ ...form, coupon_enabled: v })}
+                    />
+                  </div>
+
+                  {form.coupon_enabled ? (
+                    <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs font-semibold block text-foreground mb-1.5">
+                            কুপন কোড (Coupon Code) *
+                          </Label>
+                          <Input
+                            value={form.coupon_code}
+                            onChange={(e) => setForm({ ...form, coupon_code: e.target.value.toUpperCase().replace(/\s+/g, "") })}
+                            placeholder="যেমন: SAVE100, EID50, SUNNAH10"
+                            className="font-mono font-bold tracking-wider uppercase"
+                          />
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            গ্রাহক কার্টে এই কোডটি লিখবেন (স্পেস ছাড়া ইংরেজি বড় অক্ষরে)।
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs font-semibold block text-foreground mb-1.5">
+                            ছাড়ের ধরন (Discount Type) *
+                          </Label>
+                          <select
+                            value={form.coupon_discount_type}
+                            onChange={(e) => setForm({ ...form, coupon_discount_type: e.target.value as "fixed" | "percentage" })}
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <option value="fixed">নির্দিষ্ট টাকা ছাড় (Fixed ৳)</option>
+                            <option value="percentage">শতকরা ছাড় (Percentage %)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs font-semibold block text-foreground mb-1.5">
+                            ছাড়ের পরিমাণ {form.coupon_discount_type === "percentage" ? "(%)" : "(৳)"} *
+                          </Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={form.coupon_discount_value}
+                            onChange={(e) => setForm({ ...form, coupon_discount_value: Math.max(0, +e.target.value) })}
+                            placeholder={form.coupon_discount_type === "percentage" ? "যেমন: 10" : "যেমন: 100"}
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-xs font-semibold block text-foreground mb-1.5">
+                            সর্বনিম্ন ক্রয়ের পরিমাণ (৳)
+                          </Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={form.coupon_min_spend || ""}
+                            onChange={(e) => setForm({ ...form, coupon_min_spend: Math.max(0, +e.target.value) })}
+                            placeholder="0 (বাধ্যতামূলক নয়)"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">০ দিলে যেকোনো অর্ডারে প্রযোজ্য।</p>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs font-semibold block text-foreground mb-1.5">
+                            মেয়াদ শেষের তারিখ (ঐচ্ছিক)
+                          </Label>
+                          <Input
+                            type="date"
+                            value={form.coupon_expiry_date || ""}
+                            onChange={(e) => setForm({ ...form, coupon_expiry_date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Coupon Preview */}
+                      {form.coupon_code && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 mt-2">
+                          <p className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-2">
+                            <Tag className="h-3.5 w-3.5 text-primary" /> কুপন লাইভ প্রিভিউ:
+                          </p>
+                          <div className="flex items-center justify-between bg-card border rounded-lg p-3">
+                            <div>
+                              <span className="font-mono font-bold text-sm bg-primary/10 text-primary px-2.5 py-1 rounded-md tracking-wider">
+                                {form.coupon_code}
+                              </span>
+                              <p className="text-xs text-muted-foreground mt-1.5">
+                                ছাড়: <strong className="text-foreground">
+                                  {form.coupon_discount_type === "percentage" ? `${form.coupon_discount_value}%` : `৳${form.coupon_discount_value}`}
+                                </strong>
+                                {form.coupon_min_spend > 0 && ` (সর্বনিম্ন ৳${form.coupon_min_spend} এর অর্ডারে)`}
+                              </p>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">সক্রিয়</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-xl">
+                      <Tag className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm font-medium">এই পণ্যের জন্য বর্তমানে কোনো কুপন কোড সক্রিয় নেই</p>
+                      <p className="text-xs text-muted-foreground mt-1">উপরে সুইচটি চালু করে ছাড় সহ কুপন কোড নির্ধারণ করুন</p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Inventory Tab */}

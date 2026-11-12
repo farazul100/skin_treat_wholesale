@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   ShoppingBag,
   ShoppingCart,
@@ -15,14 +16,29 @@ import {
   Tag,
   ChevronDown,
   ChevronUp,
+  Loader2,
 } from "lucide-react";
 
 const CartDrawer = () => {
-  const { isCartOpen, closeCart, items, updateQuantity, removeItem, totalItems, totalPrice, getItemUnitPrice } = useCart();
+  const {
+    isCartOpen,
+    closeCart,
+    items,
+    updateQuantity,
+    removeItem,
+    totalItems,
+    totalPrice,
+    getItemUnitPrice,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon,
+    discountAmount,
+    finalPrice,
+  } = useCart();
   const navigate = useNavigate();
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponCode, setCouponCode] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   // Close drawer on ESC key
   useEffect(() => {
@@ -49,10 +65,18 @@ const CartDrawer = () => {
 
   if (!isCartOpen) return null;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (couponCode.trim()) {
-      setCouponApplied(true);
+    if (!couponCode.trim()) return;
+    setApplying(true);
+    const res = await applyCoupon(couponCode);
+    setApplying(false);
+    if (res.success) {
+      toast.success(res.message);
+      setCouponCode("");
+      setCouponOpen(false);
+    } else {
+      toast.error(res.message);
     }
   };
 
@@ -62,7 +86,7 @@ const CartDrawer = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-[70] overflow-hidden">
       {/* Dark backdrop overlay */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
@@ -221,51 +245,102 @@ const CartDrawer = () => {
 
           {/* Footer (Matches Reference Image) */}
           {items.length > 0 && (
-            <div className="p-4 sm:p-5 border-t bg-card/80 backdrop-blur-xs space-y-3.5 sticky bottom-0">
+            <div className="p-4 sm:p-5 pb-8 sm:pb-5 border-t bg-card/95 backdrop-blur-xs space-y-3.5 sticky bottom-0 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
               {/* Coupon Accordion */}
               <div className="border-b pb-3">
-                <button
-                  type="button"
-                  onClick={() => setCouponOpen(!couponOpen)}
-                  className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
-                    Have a coupon code? (কুপন কোড আছে?)
-                  </span>
-                  {couponOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-
-                {couponOpen && (
-                  <form onSubmit={handleApplyCoupon} className="flex gap-2 mt-2.5 animate-in fade-in duration-200">
-                    <Input
-                      placeholder="কুপন কোড দিন..."
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                    <Button type="submit" variant="secondary" size="sm" className="h-9 text-xs px-3 font-semibold">
-                      Apply
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl p-2.5">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-xs text-primary">{appliedCoupon.code}</span>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded font-bold">প্রযুক্ত</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          -৳{Number(discountAmount).toLocaleString()} ছাড় পাওয়া গেছে
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        removeCoupon();
+                        toast.info("কুপন কোড মুছে ফেলা হয়েছে");
+                      }}
+                      className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                    >
+                      মুছুন
                     </Button>
-                  </form>
-                )}
-                {couponApplied && (
-                  <p className="text-[11px] text-emerald-600 font-medium mt-1">
-                    ✓ কুপন কোড চেকআউটে যাচাই করা হবে।
-                  </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setCouponOpen(!couponOpen)}
+                      className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-primary" />
+                        Have a coupon code? (কুপন কোড আছে?)
+                      </span>
+                      {couponOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+
+                    {couponOpen && (
+                      <form onSubmit={handleApplyCoupon} className="flex gap-2 mt-2.5 animate-in fade-in duration-200">
+                        <Input
+                          placeholder="কুপন কোড দিন..."
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="h-9 text-xs uppercase font-mono font-semibold"
+                          disabled={applying}
+                        />
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          size="sm"
+                          disabled={applying || !couponCode.trim()}
+                          className="h-9 text-xs px-3 font-semibold shrink-0"
+                        >
+                          {applying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
+                        </Button>
+                      </form>
+                    )}
+                  </>
                 )}
               </div>
 
               {/* Total Row */}
-              <div className="flex items-center justify-between text-foreground">
-                <span className="font-bold text-base">Total</span>
-                <div className="text-right">
-                  <span className="text-2xl font-black text-primary">৳ {Number(totalPrice).toLocaleString()}</span>
+              <div className="space-y-1">
+                {discountAmount > 0 && (
+                  <>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>সাবটোটাল</span>
+                      <span>৳ {Number(totalPrice).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Tag className="h-3 w-3" /> কুপন ছাড় ({appliedCoupon?.code})
+                      </span>
+                      <span>-৳ {Number(discountAmount).toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center justify-between text-foreground pt-1">
+                  <span className="font-bold text-base">Total</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-primary">
+                      ৳ {Number(finalPrice).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
+              {/* Action Buttons (Raised higher on mobile for easy reach and 100% visibility) */}
+              <div className="space-y-2 pt-1.5 pb-1 sm:pb-0">
                 <Button
                   type="button"
                   onClick={handleProceedToCheckout}
@@ -275,7 +350,7 @@ const CartDrawer = () => {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
 
-                <div className="flex items-center justify-center pt-1">
+                <div className="flex items-center justify-center pt-0.5">
                   <button
                     type="button"
                     onClick={() => {

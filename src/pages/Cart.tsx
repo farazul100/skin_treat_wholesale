@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, ShoppingCart, Gift } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, Gift, Tag } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const Cart = () => {
-  const { items, updateQuantity, removeItem, totalPrice } = useCart();
+  const { items, updateQuantity, removeItem, totalPrice, appliedCoupon, discountAmount, finalPrice } = useCart();
 
   if (items.length === 0) {
     return (
@@ -120,9 +120,17 @@ const Cart = () => {
                   <span className="text-muted-foreground">ডেলিভারি চার্জ</span>
                   <span className="text-muted-foreground">চেকআউটে</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5" /> কুপন ছাড় ({appliedCoupon?.code})
+                    </span>
+                    <span>-৳{discountAmount}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 flex justify-between font-bold text-base">
                   <span>মোট</span>
-                  <span className="text-primary">৳{totalPrice}</span>
+                  <span className="text-primary">৳{finalPrice}</span>
                 </div>
               </div>
               <Link to="/checkout">

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShoppingCart, Minus, Plus, Trash2, AlertTriangle, AlertCircle, Loader2, Gift } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Trash2, AlertTriangle, AlertCircle, Loader2, Gift, Tag } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -45,7 +45,7 @@ const resolveItemImage = (img?: any) => {
 };
 
 const Checkout = () => {
-  const { items, totalPrice, clearCart, updateQuantity, removeItem } = useCart();
+  const { items, totalPrice, clearCart, updateQuantity, removeItem, appliedCoupon, discountAmount, finalPrice } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -183,7 +183,7 @@ const Checkout = () => {
   const reqFull = !canCOD && hasFullAdvanceRequirement;
   const reqAdvance = !canCOD && !reqFull;
 
-  const grandTotal = Number(totalPrice) + Number(deliveryCharge);
+  const grandTotal = Math.max(0, Number(finalPrice) + Number(deliveryCharge));
   const isPaymentEnabled = typeof settings?.payment_gateway === "string" 
     ? (JSON.parse(settings.payment_gateway)?.enabled || false)
     : (settings?.payment_gateway?.enabled || false);
@@ -337,6 +337,8 @@ const Checkout = () => {
         city: "বাংলাদেশ",
         subtotal: totalPrice,
         delivery_charge: deliveryCharge,
+        coupon_code: appliedCoupon?.code || null,
+        coupon_discount: discountAmount || 0,
         total: grandTotal,
         partial_payment: partialAmount,
         due_amount: grandTotal - partialAmount,
@@ -762,6 +764,14 @@ const Checkout = () => {
                 </div>
                 <div className="border-t mt-4 pt-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">সাবটোটাল</span><span>৳{totalPrice}</span></div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Tag className="h-3.5 w-3.5" /> কুপন ছাড় ({appliedCoupon?.code})
+                      </span>
+                      <span>-৳{discountAmount}</span>
+                    </div>
+                  )}
                   {items.some(i => i.has_gift && !i.gift_charge_enabled && Number(i.gift_price) > 0) && (
                     <div className="flex justify-between text-emerald-600 font-medium">
                       <span className="flex items-center gap-1">

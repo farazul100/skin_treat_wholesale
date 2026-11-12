@@ -164,6 +164,18 @@ async function ensureProductColumns() {
   try { await pool.query('ALTER TABLE products ADD COLUMN gift_price DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
   try { await pool.query('ALTER TABLE products ADD COLUMN gift_charge_enabled TINYINT(1) DEFAULT 0;'); } catch (e) {}
 
+  // Coupon feature columns for products
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_enabled TINYINT(1) DEFAULT 0;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_code VARCHAR(50) NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_discount_type VARCHAR(20) DEFAULT "fixed";'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_discount_value DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_min_spend DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE products ADD COLUMN coupon_expiry_date VARCHAR(50) NULL;'); } catch (e) {}
+
+  // Coupon columns for orders
+  try { await pool.query('ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(50) NULL;'); } catch (e) {}
+  try { await pool.query('ALTER TABLE orders ADD COLUMN coupon_discount DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
+
   // Gift feature columns for order_items
   try { await pool.query('ALTER TABLE order_items ADD COLUMN has_gift TINYINT(1) DEFAULT 0;'); } catch (e) {}
   try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_title VARCHAR(255) NULL;'); } catch (e) {}
