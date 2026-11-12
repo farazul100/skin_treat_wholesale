@@ -375,6 +375,8 @@ const AdminSettings = () => {
   const [catTitle, setCatTitle] = useState("Featured Categories");
   const [siteTitle, setSiteTitle] = useState("");
   const [themeColor, setThemeColor] = useState("#1f7a2e");
+  const [footerColor, setFooterColor] = useState("#1f7a2e");
+  const [syncFooterWithTheme, setSyncFooterWithTheme] = useState(true);
 
   useEffect(() => {
     if (settings) {
@@ -410,7 +412,11 @@ const AdminSettings = () => {
       setCatMobileCols(settings.category_grid?.value?.mobile || 3);
       setCatTitle(settings.category_grid?.value?.title || "Featured Categories");
       setSiteTitle(settings.site_title?.value?.title || "");
-      setThemeColor(settings.theme_color?.value?.primary_hex || "#1f7a2e");
+      const prim = settings.theme_color?.value?.primary_hex || (typeof settings.theme_color?.value === "string" ? settings.theme_color?.value : "#1f7a2e");
+      const foot = settings.theme_color?.value?.footer_hex || prim;
+      setThemeColor(prim);
+      setFooterColor(foot);
+      setSyncFooterWithTheme(prim.toLowerCase() === foot.toLowerCase());
     }
   }, [settings]);
 
@@ -564,13 +570,13 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          {/* Theme Primary Color */}
+          {/* Theme & Footer Color */}
           <div className="bg-card border rounded-xl p-5">
-            <h3 className="font-bold text-foreground mb-1">থিম কালার</h3>
-            <p className="text-sm text-muted-foreground mb-4">ওয়েবসাইটের প্রাইমারি কালার এডিট করুন (বাটন, লিংক, হাইলাইট)</p>
-            <div className="space-y-3">
+            <h3 className="font-bold text-foreground mb-1">থিম ও ফুটার কালার</h3>
+            <p className="text-sm text-muted-foreground mb-4">ওয়েবসাইটের প্রাইমারি কালার (বাটন, লিংক, হেডার) এবং ফুটার ব্যাকগ্রাউন্ড কালার এডিট করুন</p>
+            <div className="space-y-4">
               <div>
-                <Label>প্রাইমারি কালার</Label>
+                <Label>প্রাইমারি কালার (হেডার ও বাটন)</Label>
                 <div className="flex items-center gap-3 mt-1">
                   <input
                     type="color"
@@ -578,7 +584,9 @@ const AdminSettings = () => {
                     onChange={(e) => {
                       const val = e.target.value;
                       setThemeColor(val);
-                      applyThemeColor(val);
+                      const newFooter = syncFooterWithTheme ? val : footerColor;
+                      if (syncFooterWithTheme) setFooterColor(val);
+                      applyThemeColor(val, newFooter);
                     }}
                     className="h-10 w-16 rounded-md border border-input cursor-pointer bg-background"
                   />
@@ -588,18 +596,67 @@ const AdminSettings = () => {
                     onChange={(e) => {
                       const val = e.target.value;
                       setThemeColor(val);
-                      applyThemeColor(val);
+                      const newFooter = syncFooterWithTheme ? val : footerColor;
+                      if (syncFooterWithTheme) setFooterColor(val);
+                      applyThemeColor(val, newFooter);
                     }}
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">HEX কোড দিন (যেমন: #1f7a2e)। সেভ করার পর পরিবর্তন তৎক্ষণাৎ দেখা যাবে।</p>
+                <p className="text-xs text-muted-foreground mt-1">HEX কোড দিন (যেমন: #1f7a2e)।</p>
               </div>
+
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label>ফুটার ব্যাকগ্রাউন্ড কালার</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFooterColor(themeColor);
+                      setSyncFooterWithTheme(true);
+                      applyThemeColor(themeColor, themeColor);
+                    }}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    থিম কালারের সাথে ম্যাচ করুন
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <input
+                    type="color"
+                    value={footerColor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFooterColor(val);
+                      setSyncFooterWithTheme(val.toLowerCase() === themeColor.toLowerCase());
+                      applyThemeColor(themeColor, val);
+                    }}
+                    className="h-10 w-16 rounded-md border border-input cursor-pointer bg-background"
+                  />
+                  <Input
+                    placeholder="#1f7a2e"
+                    value={footerColor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFooterColor(val);
+                      setSyncFooterWithTheme(val.toLowerCase() === themeColor.toLowerCase());
+                      applyThemeColor(themeColor, val);
+                    }}
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">ডিফল্টভাবে এটি থিম কালার অনুযায়ী অটোমেটিক আপডেট হবে, বা আপনি চাইলে আলাদা কালারও দিতে পারেন।</p>
+              </div>
+
               <Button
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => {
-                  applyThemeColor(themeColor);
-                  updateMutation.mutate({ key: "theme_color", value: { primary_hex: themeColor } });
+                  applyThemeColor(themeColor, footerColor);
+                  updateMutation.mutate({
+                    key: "theme_color",
+                    value: { primary_hex: themeColor, footer_hex: footerColor },
+                  });
                 }}
               >
                 সেভ করুন

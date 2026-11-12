@@ -1,5 +1,5 @@
 // src/lib/theme.ts
-// Handles dynamic theme primary color application and CSS variable generation
+// Handles dynamic theme primary and footer color application and CSS variable generation
 
 export const normalizeHex = (hex: string): string | null => {
   if (!hex) return null;
@@ -45,31 +45,57 @@ export const hexToHsl = (hex: string): { hsl: string; lightness: number } | null
   };
 };
 
-export const applyThemeColor = (hex: string) => {
+export const applyThemeColor = (primaryHex: string, footerHex?: string) => {
   if (typeof document === "undefined") return;
-  const result = hexToHsl(hex);
-  if (!result) return;
-  const { hsl, lightness } = result;
   const root = document.documentElement;
 
-  root.style.setProperty("--primary", hsl);
-  root.style.setProperty("--ring", hsl);
-  root.style.setProperty("--sidebar-primary", hsl);
-  root.style.setProperty("--sidebar-ring", hsl);
-  root.style.setProperty("--secondary-foreground", hsl);
-  root.style.setProperty("--accent-foreground", hsl);
-  root.style.setProperty("--sidebar-accent-foreground", hsl);
+  // 1. Primary theme color (header category bar, buttons, highlights, badges)
+  if (primaryHex) {
+    const result = hexToHsl(primaryHex);
+    if (result) {
+      const { hsl, lightness } = result;
+      root.style.setProperty("--primary", hsl);
+      root.style.setProperty("--ring", hsl);
+      root.style.setProperty("--sidebar-primary", hsl);
+      root.style.setProperty("--sidebar-ring", hsl);
+      root.style.setProperty("--secondary-foreground", hsl);
+      root.style.setProperty("--accent-foreground", hsl);
+      root.style.setProperty("--sidebar-accent-foreground", hsl);
 
-  // Set high-contrast foreground (white on dark/medium, dark on light)
-  if (lightness > 0.65) {
-    root.style.setProperty("--primary-foreground", "140 60% 8%");
-    root.style.setProperty("--sidebar-primary-foreground", "140 60% 8%");
-  } else {
-    root.style.setProperty("--primary-foreground", "0 0% 100%");
-    root.style.setProperty("--sidebar-primary-foreground", "0 0% 100%");
+      // Set high-contrast foreground (white on dark/medium, dark on light)
+      if (lightness > 0.65) {
+        root.style.setProperty("--primary-foreground", "140 60% 8%");
+        root.style.setProperty("--sidebar-primary-foreground", "140 60% 8%");
+      } else {
+        root.style.setProperty("--primary-foreground", "0 0% 100%");
+        root.style.setProperty("--sidebar-primary-foreground", "0 0% 100%");
+      }
+
+      try {
+        localStorage.setItem("app_theme_color", primaryHex);
+      } catch {}
+    }
   }
 
-  try {
-    localStorage.setItem("app_theme_color", hex);
-  } catch {}
+  // 2. Footer color (defaults to primaryHex if footerHex is empty)
+  const effectiveFooter = footerHex || primaryHex;
+  if (effectiveFooter) {
+    const footerResult = hexToHsl(effectiveFooter);
+    if (footerResult) {
+      const { hsl, lightness } = footerResult;
+      root.style.setProperty("--footer-bg", hsl);
+
+      if (lightness > 0.65) {
+        root.style.setProperty("--footer-foreground", "140 60% 8%");
+        root.style.setProperty("--footer-invert", "0");
+      } else {
+        root.style.setProperty("--footer-foreground", "0 0% 100%");
+        root.style.setProperty("--footer-invert", "1");
+      }
+
+      try {
+        localStorage.setItem("app_footer_color", effectiveFooter);
+      } catch {}
+    }
+  }
 };

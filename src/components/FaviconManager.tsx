@@ -8,7 +8,8 @@ const FaviconManager = () => {
   useEffect(() => {
     try {
       const cached = localStorage.getItem("app_theme_color");
-      if (cached) applyThemeColor(cached);
+      const cachedFooter = localStorage.getItem("app_footer_color");
+      if (cached || cachedFooter) applyThemeColor(cached || "", cachedFooter || "");
     } catch {}
   }, []);
 
@@ -38,18 +39,26 @@ const FaviconManager = () => {
     staleTime: 1000 * 60 * 10,
   });
 
-  const { data: themeColor } = useQuery({
+  const { data: themeColorData } = useQuery({
     queryKey: ["theme-color"],
     queryFn: async () => {
       try {
         const { data: rpcData } = await supabase.rpc("get_public_setting", { _key: "theme_color" });
         if (rpcData) {
-          const hex = (rpcData as any)?.primary_hex || (typeof rpcData === "string" ? rpcData : "");
-          if (hex) return hex;
+          if (typeof rpcData === "string") return { primary_hex: rpcData, footer_hex: rpcData };
+          return {
+            primary_hex: (rpcData as any)?.primary_hex || "",
+            footer_hex: (rpcData as any)?.footer_hex || (rpcData as any)?.primary_hex || "",
+          };
         }
       } catch {}
       const { data } = await supabase.from("site_settings").select("*").eq("key", "theme_color").single();
-      return (data?.value || (data as any)?.setting_value)?.primary_hex || "";
+      const val = data?.value || (data as any)?.setting_value;
+      if (typeof val === "string") return { primary_hex: val, footer_hex: val };
+      return {
+        primary_hex: val?.primary_hex || "",
+        footer_hex: val?.footer_hex || val?.primary_hex || "",
+      };
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -79,10 +88,10 @@ const FaviconManager = () => {
   }, [siteTitle]);
 
   useEffect(() => {
-    if (themeColor) {
-      applyThemeColor(themeColor);
+    if (themeColorData?.primary_hex) {
+      applyThemeColor(themeColorData.primary_hex, themeColorData.footer_hex);
     }
-  }, [themeColor]);
+  }, [themeColorData]);
 
   return null;
 };
