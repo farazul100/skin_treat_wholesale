@@ -58,14 +58,30 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     let filename;
     
     if (isImage) {
-      filename = `img-${timestamp}.webp`;
-      const outputPath = path.join(uploadDir, filename);
-      
-      // Auto-reduce and convert to WebP
-      await sharp(req.file.buffer)
-        .resize({ width: 800, withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toFile(outputPath);
+      // Vector SVGs: save directly without rasterization to preserve infinite vector sharpness
+      if (req.file.mimetype === 'image/svg+xml') {
+        filename = `svg-${timestamp}.svg`;
+        const outputPath = path.join(uploadDir, filename);
+        fs.writeFileSync(outputPath, req.file.buffer);
+      } else {
+        filename = `img-${timestamp}.webp`;
+        const outputPath = path.join(uploadDir, filename);
+        
+        // Smart optimization: retain Full HD crispness (up to 1920px) while heavily reducing file size with WebP
+        await sharp(req.file.buffer)
+          .rotate() // Auto-orient phone photos based on EXIF
+          .resize({
+            width: 1920,
+            height: 1920,
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({
+            quality: 86,
+            effort: 4
+          })
+          .toFile(outputPath);
+      }
     } else {
       // Handle videos
       const ext = path.extname(req.file.originalname) || '';
