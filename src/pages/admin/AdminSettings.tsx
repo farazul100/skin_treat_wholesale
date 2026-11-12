@@ -685,62 +685,63 @@ const AdminSettings = () => {
               <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 300×80 px</span>
             </div>
             <p className="text-xs text-muted-foreground mb-4">হরাইজন্টাল রেশিও (300×80 বা 250×60 px)। ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড PNG বা SVG রিকমেন্ডেড।</p>
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                {logoUrl ? (
-                  <div className="flex items-center gap-3">
-                    {/* Checkerboard transparency container */}
-                    <div className="relative group rounded-lg overflow-hidden border p-1.5 bg-[repeating-conic-gradient(#cbd5e1_0%_25%,#f8fafc_0%_50%)] bg-[length:16px_16px]">
-                      <div className={`rounded px-3 py-2 flex items-center justify-center min-w-[140px] min-h-[56px] transition-colors ${logoPreviewDark ? "bg-slate-900" : "bg-white"}`}>
-                        <img
-                          src={logoUrl}
-                          alt="Logo"
-                          className="h-12 w-auto max-w-[200px] object-contain"
-                          style={(!logoPreviewDark && invertOnWhite) ? { filter: "brightness(0)" } : undefined}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLogoUrl("");
-                          updateMutation.mutate({ key: "site_logo", value: { url: "", invert_on_white: false } });
-                        }}
-                        className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-1 opacity-90 hover:opacity-100 transition-opacity shadow"
-                        title="লোগো ডিলিট করুন"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+            <div className="space-y-4">
+              {logoUrl ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Checkerboard transparency container */}
+                  <div className="relative group rounded-lg overflow-hidden border p-1 bg-[repeating-conic-gradient(#cbd5e1_0%_25%,#f8fafc_0%_50%)] bg-[length:14px_14px]">
+                    <div className={`rounded px-3 py-2 flex items-center justify-center min-w-[130px] max-w-[200px] h-[52px] transition-colors ${logoPreviewDark ? "bg-slate-900" : "bg-white"}`}>
+                      <img
+                        src={logoUrl}
+                        alt="Logo"
+                        className="h-10 w-auto max-w-[180px] object-contain"
+                        style={(!logoPreviewDark && invertOnWhite) ? { filter: "brightness(0)" } : undefined}
+                      />
                     </div>
-
                     <button
                       type="button"
-                      onClick={() => setLogoPreviewDark(!logoPreviewDark)}
-                      className="text-xs px-2.5 py-1.5 rounded-md border bg-background hover:bg-muted text-foreground flex items-center gap-1 shrink-0"
+                      onClick={() => {
+                        setLogoUrl("");
+                        updateMutation.mutate({ key: "site_logo", value: { url: "", invert_on_white: false } });
+                      }}
+                      className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-1 opacity-90 hover:opacity-100 transition-opacity shadow"
+                      title="লোগো ডিলিট করুন"
                     >
-                      {logoPreviewDark ? "☀️ লাইট ভিউ" : "🌙 ডার্ক ভিউ"}
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
-                ) : (
-                  <div className="h-16 w-16 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground shrink-0">
-                    <Upload className="h-5 w-5" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <label className="cursor-pointer">
-                    <Button variant="outline" size="sm" asChild disabled={logoUploading}>
-                      <span>
-                        {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "লোগো আপলোড করুন (300×80 px)"}
-                      </span>
-                    </Button>
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]); e.target.value = ""; }} />
-                  </label>
-                  <p className="text-xs text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLogoPreviewDark(!logoPreviewDark)}
+                    className="text-xs h-8 px-2.5 gap-1 shrink-0"
+                  >
+                    {logoPreviewDark ? "☀️ লাইট ভিউ" : "🌙 ডার্ক ভিউ"}
+                  </Button>
                 </div>
+              ) : (
+                <div className="h-14 w-14 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground shrink-0">
+                  <Upload className="h-5 w-5" />
+                </div>
+              )}
+
+              <div className="pt-0.5">
+                <label className="cursor-pointer inline-flex">
+                  <Button variant="outline" size="sm" asChild disabled={logoUploading} className="text-xs">
+                    <span>
+                      {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : <><Upload className="h-3.5 w-3.5 mr-1" /> লোগো আপলোড করুন</>}
+                    </span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]); e.target.value = ""; }} />
+                </label>
+                <p className="text-[11px] text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
               </div>
 
               {logoUrl && (
-                <div className="pt-2.5 border-t mt-2">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-foreground font-medium select-none">
+                <div className="pt-2.5 border-t">
+                  <label className="flex items-start gap-2 cursor-pointer text-xs text-foreground font-medium select-none">
                     <input
                       type="checkbox"
                       checked={invertOnWhite}
@@ -749,13 +750,15 @@ const AdminSettings = () => {
                         setInvertOnWhite(checked);
                         updateMutation.mutate({ key: "site_logo", value: { url: logoUrl, invert_on_white: checked } });
                       }}
-                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4 mt-0.5"
                     />
-                    <span>সাদা (White) লোগোকে সাদা হেডারে দৃশ্যমান করতে ডার্ক (কালো) করুন</span>
+                    <div>
+                      <span>সাদা (White) লোগোকে সাদা হেডারে দৃশ্যমান করতে ডার্ক (কালো) করুন</span>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
+                        লোগো ফাইলটি যদি সাদা টেক্সটের হয়, তবে সাদা হেডারে এটি স্পষ্ট দেখাতে এই অপশনটি চালু রাখুন।
+                      </p>
+                    </div>
                   </label>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 ml-6">
-                    লোগো ফাইলটি যদি সাদা টেক্সটের হয়, তবে সাদা হেডারে এটি স্পষ্ট দেখাতে এই অপশনটি চালু রাখুন।
-                  </p>
                 </div>
               )}
             </div>
