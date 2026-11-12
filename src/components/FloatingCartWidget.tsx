@@ -43,3 +43,4 @@ const FloatingCartWidget = ({ className = "" }: FloatingCartWidgetProps) => {
 };
 
 export default FloatingCartWidget;
+

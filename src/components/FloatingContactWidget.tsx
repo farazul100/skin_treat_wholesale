@@ -175,3 +175,4 @@ const FloatingContactWidget = ({ className = "" }: FloatingContactWidgetProps) =
 };
 
 export default FloatingContactWidget;
+

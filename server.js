@@ -183,6 +183,14 @@ async function ensureShefaVideosTable() {
 }
 ensureShefaVideosTable();
 
+// Auto-ensure hero_slides table columns
+async function ensureHeroSlidesColumns() {
+  try {
+    await pool.query('ALTER TABLE hero_slides ADD COLUMN mobile_image_url TEXT NULL;');
+  } catch (e) {}
+}
+ensureHeroSlidesColumns();
+
 // Auto-ensure orders and products payment/delivery columns exist
 async function ensurePaymentColumns() {
   try { await pool.query('ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT "cod";'); } catch (e) {}

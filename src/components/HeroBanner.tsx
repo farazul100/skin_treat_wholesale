@@ -59,7 +59,7 @@ const HeroBanner = () => {
     return (
       <section className="bg-background py-0 md:py-3 -mt-px md:mt-0">
         <div className="w-full md:container mx-auto px-0 md:px-4 max-w-[1536px]">
-          <div className="w-full bg-muted animate-pulse rounded-none aspect-[2.1/1] max-h-[420px]" />
+          <div className="w-full bg-muted/40 animate-pulse rounded-none md:rounded-xl aspect-[16/5] md:aspect-[1920/600]" />
         </div>
       </section>
     );
@@ -74,29 +74,41 @@ const HeroBanner = () => {
   return (
     <section className="bg-background py-0 md:py-3 -mt-px md:mt-0">
       <div className="w-full md:container mx-auto px-0 md:px-4 max-w-[1536px]">
-        <div className="flex flex-col lg:flex-row gap-0 lg:gap-4 items-stretch">
+        <div
+          className={`grid grid-cols-1 ${
+            hasPromo ? "lg:grid-cols-12" : ""
+          } gap-0 lg:gap-4 items-stretch`}
+        >
           {/* Main Hero Slider */}
           <div
-            className={`w-full ${
-              hasPromo ? "lg:w-[67%]" : "w-full"
-            } relative rounded-none overflow-hidden bg-muted/40`}
+            className={`${
+              hasPromo ? "lg:col-span-8" : "w-full"
+            } relative rounded-none md:rounded-xl overflow-hidden bg-muted/20 flex flex-col`}
           >
             <div
               className={`relative w-full ${
                 hasPromo
-                  ? "aspect-[16/9] sm:aspect-[2/1] lg:aspect-[2.35/1] max-h-[360px] md:max-h-[400px] lg:max-h-[440px]"
-                  : "aspect-[16/8] md:aspect-[1400/440] max-h-[360px] md:max-h-[420px]"
+                  ? "aspect-[16/7] sm:aspect-[2/1] lg:aspect-auto lg:h-[430px] xl:h-[450px]"
+                  : "aspect-[16/5] sm:aspect-[16/5] md:aspect-[1920/600]"
               }`}
             >
               {slides!.map((s, i) => {
                 const isCurrent = i === current;
                 const imgElement = (
-                  <img
-                    src={s.image_url}
-                    alt={s.title || "Banner"}
-                    className="w-full h-full object-cover"
-                    loading={i === 0 ? "eager" : "lazy"}
-                  />
+                  <picture className="w-full h-full block">
+                    {s.mobile_image_url ? (
+                      <source
+                        media="(max-width: 640px)"
+                        srcSet={s.mobile_image_url}
+                      />
+                    ) : null}
+                    <img
+                      src={s.image_url}
+                      alt={s.title || "Banner"}
+                      className="w-full h-full object-cover object-center"
+                      loading={i === 0 ? "eager" : "lazy"}
+                    />
+                  </picture>
                 );
 
                 return (
@@ -182,10 +194,10 @@ const HeroBanner = () => {
             </div>
           </div>
 
-          {/* Side Promo Banner (Desktop Only, hidden on mobile) */}
+          {/* Side Promo Banner (Desktop Only, hidden on mobile - exactly equal row height) */}
           {hasPromo && (
-            <div className="hidden lg:block lg:w-[33%] shrink-0">
-              <div className="relative w-full h-full rounded-none overflow-hidden bg-muted/40 group">
+            <div className="hidden lg:flex lg:col-span-4 flex-col h-full">
+              <div className="relative w-full h-full rounded-none md:rounded-xl overflow-hidden bg-muted/20 group flex-1">
                 {promoSetting.link_url ? (
                   promoSetting.link_url.startsWith("http") ? (
                     <a
@@ -197,7 +209,7 @@ const HeroBanner = () => {
                       <img
                         src={promoSetting.image_url}
                         alt={promoSetting.title || "Promo Banner"}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                       />
                     </a>
                   ) : (
@@ -205,7 +217,7 @@ const HeroBanner = () => {
                       <img
                         src={promoSetting.image_url}
                         alt={promoSetting.title || "Promo Banner"}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                       />
                     </Link>
                   )
@@ -213,7 +225,7 @@ const HeroBanner = () => {
                   <img
                     src={promoSetting.image_url}
                     alt={promoSetting.title || "Promo Banner"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-center"
                   />
                 )}
               </div>

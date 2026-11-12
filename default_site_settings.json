@@ -115,6 +115,12 @@
   },
   "social_share_banner": {
     "url": ""
+  },
+  "hero_promo_banner": {
+    "enabled": false,
+    "image_url": "",
+    "link_url": "",
+    "title": ""
   }
 }
 

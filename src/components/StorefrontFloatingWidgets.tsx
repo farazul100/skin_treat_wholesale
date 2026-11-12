@@ -33,3 +33,4 @@ const StorefrontFloatingWidgets = () => {
 };
 
 export default StorefrontFloatingWidgets;
+

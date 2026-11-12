@@ -44,3 +44,4 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
 };
 
 export default ScrollToTopButton;
+

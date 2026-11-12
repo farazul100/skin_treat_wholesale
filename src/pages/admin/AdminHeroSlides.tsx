@@ -6,15 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Image, Upload, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Image, Upload, Loader2, GripVertical, Smartphone, Monitor, Info, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminHeroSlides = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ image_url: "", link_url: "", title: "", sort_order: 0, is_active: true });
+  const [form, setForm] = useState({
+    image_url: "",
+    mobile_image_url: "",
+    link_url: "",
+    title: "",
+    sort_order: 0,
+    is_active: true,
+  });
   const [uploading, setUploading] = useState(false);
+  const [uploadingMobile, setUploadingMobile] = useState(false);
 
   const { data: settings } = useQuery({
     queryKey: ["admin-settings"],
@@ -120,9 +128,22 @@ const AdminHeroSlides = () => {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const result = await res.json();
       setForm((f) => ({ ...f, image_url: result.secure_url }));
-      toast.success("ছবি আপলোড হয়েছে");
+      toast.success("প্রধান ব্যানার ছবি আপলোড হয়েছে");
     } catch { toast.error("আপলোড ব্যর্থ"); }
     finally { setUploading(false); }
+  }, []);
+
+  const uploadMobileImage = useCallback(async (file: File) => {
+    setUploadingMobile(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const result = await res.json();
+      setForm((f) => ({ ...f, mobile_image_url: result.secure_url }));
+      toast.success("মোবাইল ব্যানার ছবি আপলোড হয়েছে");
+    } catch { toast.error("মোবাইল ব্যানার আপলোড ব্যর্থ"); }
+    finally { setUploadingMobile(false); }
   }, []);
 
   const saveMutation = useMutation({
@@ -141,7 +162,7 @@ const AdminHeroSlides = () => {
       toast.success(editing ? "স্লাইড আপডেট হয়েছে" : "স্লাইড যোগ হয়েছে");
       setOpen(false);
       setEditing(null);
-      setForm({ image_url: "", link_url: "", title: "", sort_order: 0, is_active: true });
+      setForm({ image_url: "", mobile_image_url: "", link_url: "", title: "", sort_order: 0, is_active: true });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -160,7 +181,14 @@ const AdminHeroSlides = () => {
 
   const openEdit = (s: any) => {
     setEditing(s);
-    setForm({ image_url: s.image_url, link_url: s.link_url || "", title: s.title || "", sort_order: s.sort_order || 0, is_active: s.is_active });
+    setForm({
+      image_url: s.image_url,
+      mobile_image_url: s.mobile_image_url || "",
+      link_url: s.link_url || "",
+      title: s.title || "",
+      sort_order: s.sort_order || 0,
+      is_active: s.is_active,
+    });
     setOpen(true);
   };
 
@@ -199,9 +227,11 @@ const AdminHeroSlides = () => {
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">ব্যানার ছবি *</Label>
-              <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 600×550 px</span>
+              <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 500×450 px (বা 600×550 px)</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-2">অনুপাত ১.১:১ বা ৪:৩। সাইড ব্যানার হিসেবে নিখুঁত প্রদর্শনের জন্য রিকমেন্ডেড।</p>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              উচ্চতা ৪৫০ px যা বাম পাশের প্রধান স্লাইডারের উচ্চতার সাথে ১০০% নিখুঁতভাবে সমান (Equal Height) থাকবে। অনুপাত ১.১:১ বা ১০:৯।
+            </p>
             {promoForm.image_url ? (
               <div className="relative rounded-xl overflow-hidden border bg-muted/30 aspect-[4/3] max-h-56">
                 <img
@@ -298,41 +328,105 @@ const AdminHeroSlides = () => {
             ওয়েবসাইটের হোমপেইজের প্রধান স্লাইডার ব্যানারসমূহ পরিচালনা করুন।
           </p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ image_url: "", link_url: "", title: "", sort_order: 0, is_active: true }); } }}>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v);
+            if (!v) {
+              setEditing(null);
+              setForm({
+                image_url: "",
+                mobile_image_url: "",
+                link_url: "",
+                title: "",
+                sort_order: 0,
+                is_active: true,
+              });
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="gap-1 shrink-0"><Plus className="h-4 w-4" /> স্লাইড যোগ</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? "স্লাইড সম্পাদনা" : "নতুন স্লাইড"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Guidance Box */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
+                <p className="font-bold text-foreground flex items-center gap-1.5 text-xs sm:text-[13px]">
+                  <Sparkles className="h-4 w-4 text-primary shrink-0" /> ব্যানার সাইজ ও অনুপাত গাইড (ফোন ও পিসির জন্য):
+                </p>
+                <div className="space-y-1 pt-1 leading-relaxed">
+                  <p>• <strong>প্রোমো ব্যানার বন্ধ থাকলে (ফুল-উইডথ):</strong> <span className="text-foreground font-semibold">1920 × 600 px</span> অথবা <span className="text-foreground font-semibold">1400 × 440 px</span> (অনুপাত ৩.২ : ১)।</p>
+                  <p>• <strong>সাইড প্রোমো ব্যানার চালু থাকলে:</strong> প্রধান স্লাইডার <span className="text-foreground font-semibold">1000 × 450 px</span> এবং সাইড ব্যানার <span className="text-foreground font-semibold">500 × 450 px</span> (উভয়ের উচ্চতা সমান ৪৫০ px)।</p>
+                  <p>• <strong>মোবাইল ব্যানার (ঐচ্ছিক):</strong> <span className="text-foreground font-semibold">750 × 450 px</span> বা <span className="text-foreground font-semibold">800 × 500 px</span>। এটি ফাঁকা রাখলে প্রধান ব্যানারটিই মোবাইলে সম্পূর্ণ দৃশ্যমান থাকবে।</p>
+                  <p>• <strong>সেফ জোন:</strong> মূল টেক্সট ও পণ্য মাঝখানের অংশে রাখুন, দুই পাশে কিছুটা ফাঁকা রাখুন যাতে কোনো ডিভাইসেই কোনো অংশ না কাটে।</p>
+                </div>
+              </div>
+
+              {/* Main Desktop Banner */}
               <div>
                 <div className="flex items-center justify-between">
-                  <Label>ব্যানার ছবি *</Label>
-                  <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 1920×600 px</span>
-                </div>
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 mt-1.5 mb-2 text-[11px] text-muted-foreground space-y-1">
-                  <p className="font-bold text-foreground">ফোন ও পিসি উভয় স্ক্রিনে সম্পূর্ণ দেখানোর টিপস:</p>
-                  <p>• <strong>সঠিক রেজোলিউশন:</strong> ১৯২০ × ৬০০ px (অথবা ১৪০০ × ৪৪০ px)।</p>
-                  <p>• <strong>সেফ জোন (Safe Zone):</strong> মূল লেখা, অফার ও প্রোডাক্ট ব্যানারের <strong>মাঝখানের ৭০% জায়গার মধ্যে</strong> রাখুন। দুই পাশের ১৫% জায়গায় ব্যাকগ্রাউন্ড কালার রাখুন, এতে মোবাইলেও লেখা কেটে যাবে না এবং পিসিতেও সম্পূর্ণ দেখা যাবে।</p>
+                  <Label className="flex items-center gap-1.5 font-semibold">
+                    <Monitor className="h-4 w-4 text-muted-foreground" /> প্রধান ব্যানার ছবি (পিসি / ডেস্কটপ) *
+                  </Label>
+                  <span className="text-[11px] font-bold text-primary">1920×600 px (বা 1400×440 px)</span>
                 </div>
                 {form.image_url ? (
                   <div className="relative mt-2 rounded-lg overflow-hidden border">
                     <img src={form.image_url} alt="Preview" className="w-full h-40 object-cover" />
-                    <button onClick={() => setForm((f) => ({ ...f, image_url: "" }))} className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1">
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
+                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                    >
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 ) : (
                   <label className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-secondary/50 transition-colors">
                     {uploading ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 text-muted-foreground" />}
-                    <span className="text-sm font-medium text-foreground mt-2">{uploading ? "আপলোড হচ্ছে..." : "ছবি আপলোড করুন (1920×600 px)"}</span>
+                    <span className="text-sm font-medium text-foreground mt-2">{uploading ? "আপলোড হচ্ছে..." : "প্রধান ব্যানার আপলোড করুন (1920×600 px)"}</span>
                     <span className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WebP — আল্ট্রা-ওয়াইড অনুপাত ৩.২:১</span>
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = ""; }} />
                   </label>
                 )}
               </div>
+
+              {/* Optional Mobile Banner */}
+              <div className="pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5 font-semibold">
+                    <Smartphone className="h-4 w-4 text-muted-foreground" /> মোবাইল ব্যানার ছবি (ঐচ্ছিক)
+                  </Label>
+                  <span className="text-[11px] font-bold text-muted-foreground">750×450 px বা 800×500 px</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">
+                  মোবাইল স্ক্রিনে ভিন্ন বা বড় লেখার ব্যানার দেখাতে চাইলে আপলোড করুন। খালি রাখলে স্বয়ংক্রিয়ভাবে প্রধান ব্যানারটিই মোবাইলে সম্পূর্ণ দেখাবে।
+                </p>
+                {form.mobile_image_url ? (
+                  <div className="relative mt-2 rounded-lg overflow-hidden border">
+                    <img src={form.mobile_image_url} alt="Mobile Preview" className="w-full h-32 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, mobile_image_url: "" }))}
+                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-secondary/50 transition-colors">
+                    {uploadingMobile ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : <Upload className="h-6 w-6 text-muted-foreground" />}
+                    <span className="text-xs font-medium text-foreground mt-1.5">{uploadingMobile ? "আপলোড হচ্ছে..." : "মোবাইল ব্যানার আপলোড করুন (ঐচ্ছিক)"}</span>
+                    <span className="text-[10px] text-muted-foreground">JPG, PNG, WebP — ফোন ভিউর জন্য উপযোগী</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadMobileImage(e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                )}
+              </div>
+
               <div>
                 <Label>লিংক URL (ক্লিক করলে যেখানে যাবে)</Label>
                 <Input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="যেমন: /product/my-product বা https://..." className="mt-1" />
@@ -370,7 +464,14 @@ const AdminHeroSlides = () => {
             </div>
             <div className="p-3 flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">{s.title || "Untitled"}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground truncate">{s.title || "Untitled"}</p>
+                  {s.mobile_image_url && (
+                    <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-1">
+                      <Smartphone className="h-2.5 w-2.5" /> মোবাইল
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground truncate">{s.link_url || "কোনো লিংক নেই"} • অর্ডার: {s.sort_order}</p>
               </div>
               <div className="flex gap-1">
