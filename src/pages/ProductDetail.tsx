@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, ArrowLeft, Minus, Plus, ShieldCheck, Truck, Clock, CheckCircle2, Shield, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Video, Gift } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Minus, Plus, ShieldCheck, Truck, Clock, CheckCircle2, Shield, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Video, Gift, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
@@ -288,21 +288,29 @@ const ProductDetail = () => {
                 </p>
               )}
 
-              {/* Gift Offer Box if product has gift */}
+              {/* High-Impact Gift Offer Box (Eye-catching & Irresistible) */}
               {Boolean(product.has_gift && product.gift_title) && (
-                <div className="mb-5 rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-amber-50/50 p-3.5 sm:p-4 shadow-xs relative overflow-hidden">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs">
-                      <Gift className="h-3.5 w-3.5" />
-                      {product.gift_charge_enabled ? "স্পেশাল গিফট অফার" : "সম্পূর্ণ ফ্রি উপহার"}
-                    </span>
-                    <span className="text-xs font-semibold text-emerald-800">
-                      এই পণ্যের সাথে উপহার অন্তর্ভুক্ত!
+                <div className="mb-6 rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-br from-emerald-500/[0.08] via-card to-amber-500/[0.08] shadow-lg shadow-emerald-500/10 overflow-hidden relative group transition-all duration-300 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-500/15">
+                  {/* Top Glowing Ribbon / Announcement Strip */}
+                  <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-3.5 sm:px-4 py-2 flex items-center justify-between gap-2 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                        <Gift className="h-3.5 w-3.5 text-white animate-bounce" />
+                      </span>
+                      <span className="font-extrabold text-xs sm:text-sm tracking-wide flex items-center gap-1.5">
+                        {product.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!"}
+                      </span>
+                    </div>
+                    <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-xs flex items-center gap-1">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      {product.gift_charge_enabled ? "LIMITED PACK" : "FREE GIFT"}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white border border-emerald-200/80 p-1 flex-shrink-0 flex items-center justify-center shadow-xs overflow-hidden">
+                  {/* Body Content */}
+                  <div className="p-3.5 sm:p-4.5 flex gap-3.5 sm:gap-4 items-center">
+                    {/* Large Framed Gift Image with Badge */}
+                    <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl bg-white border-2 border-emerald-400/60 p-1.5 flex-shrink-0 flex items-center justify-center shadow-md overflow-hidden group-hover:scale-105 transition-transform duration-300">
                       {product.gift_image ? (
                         <img
                           src={product.gift_image}
@@ -310,31 +318,55 @@ const ProductDetail = () => {
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <Gift className="h-8 w-8 text-emerald-600" />
+                        <Gift className="h-10 w-10 text-emerald-600" />
                       )}
+                      <span className="absolute -bottom-0.5 inset-x-0 bg-emerald-600 text-white text-[9px] font-black py-0.5 text-center uppercase tracking-wider">
+                        {product.gift_charge_enabled ? "GIFT" : "FREE"}
+                      </span>
                     </div>
+
+                    {/* Offer Copy & Value Callout */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-sm sm:text-base text-foreground line-clamp-1">
-                        {product.gift_title}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-extrabold text-sm sm:text-base text-foreground leading-tight">
+                          {product.gift_title}
+                        </h4>
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300/60">
+                          {product.gift_charge_enabled ? "স্পেশাল অফার" : "সম্পূর্ণ বিনামূল্যে"}
+                        </span>
+                      </div>
+
+                      {/* Pricing Highlight */}
+                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                         {product.gift_charge_enabled ? (
-                          <span className="text-xs font-bold text-primary">
-                            প্যাকেজ মূল্য: +৳{Number(product.gift_price || 0)} (চেকআউটে যোগ হবে)
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <span className="text-muted-foreground line-through">
-                              মূল্য: ৳{Number(product.gift_price || 0)}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs sm:text-sm font-black text-primary bg-primary/10 border border-primary/25 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                              প্যাকেজ মূল্য: +৳{Number(product.gift_price || 0)}
                             </span>
-                            <span className="text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded">
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              (চেকআউটে মূল্যের সাথে যোগ হবে)
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-muted-foreground line-through font-bold">
+                              বাজার মূল্য: ৳{Number(product.gift_price || 0)}
+                            </span>
+                            <span className="text-xs sm:text-sm font-black text-emerald-700 bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 px-2 py-0.5 rounded-lg shadow-2xs">
                               ৳০ (ফ্রি!)
                             </span>
+                            {Number(product.gift_price) > 0 && (
+                              <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-800 bg-amber-100 dark:bg-amber-950/70 border border-amber-300/80 px-2 py-0.5 rounded-lg">
+                                ⚡ ৳{Number(product.gift_price)} টাকা সেভ হচ্ছে!
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        অর্ডার করলেই মূল পণ্যের সাথে এই আকর্ষণীয় উপহারটি পাঠানো হবে।
+
+                      <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5 leading-snug">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>অর্ডার করলেই মূল পণ্যের সাথে একই পার্সেল-এ এই আকর্ষণীয় উপহারটি পাঠানো হবে।</span>
                       </p>
                     </div>
                   </div>

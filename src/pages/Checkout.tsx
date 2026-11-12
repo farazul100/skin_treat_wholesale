@@ -724,35 +724,43 @@ const Checkout = () => {
                           </span>
                         </div>
 
-                        {/* Gift Info Card if product has gift */}
+                        {/* High-Impact Gift Box in Checkout (Eye-catching & Irresistible) */}
                         {Boolean(item.has_gift && item.gift_title) && (
-                          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-md p-2 flex items-center gap-2.5 mt-0.5">
-                            <div className="w-9 h-9 rounded bg-white flex-shrink-0 flex items-center justify-center overflow-hidden border border-emerald-200 p-0.5 shadow-2xs">
+                          <div className="bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-amber-500/15 border-2 border-emerald-500/60 rounded-xl p-2.5 flex items-center gap-3 mt-1.5 shadow-xs relative overflow-hidden">
+                            {/* Gift Image with badge */}
+                            <div className="relative w-12 h-12 rounded-xl bg-white flex-shrink-0 flex items-center justify-center overflow-hidden border-2 border-emerald-400 p-0.5 shadow-sm">
                               {item.gift_image ? (
                                 <img src={resolveItemImage(item.gift_image)} alt="" className="w-full h-full object-contain" />
                               ) : (
-                                <Gift className="h-4 w-4 text-emerald-600" />
+                                <Gift className="h-6 w-6 text-emerald-600" />
                               )}
+                              <span className="absolute -bottom-0.5 inset-x-0 bg-emerald-600 text-white text-[8px] font-black text-center uppercase tracking-tight">
+                                {item.gift_charge_enabled ? "GIFT" : "FREE"}
+                              </span>
                             </div>
+
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-bold text-white bg-emerald-600 px-1.5 py-0.2 rounded flex items-center gap-1">
-                                  <Gift className="h-2.5 w-2.5" />
-                                  {item.gift_charge_enabled ? "স্পেশাল গিফট" : "ফ্রি উপহার"}
+                                <span className="text-[10px] font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-0.5 rounded-full shadow-2xs flex items-center gap-1">
+                                  <Gift className="h-2.5 w-2.5 animate-bounce" />
+                                  {item.gift_charge_enabled ? "🎁 স্পেশাল গিফট" : "🎁 ১০০% ফ্রি উপহার"}
                                 </span>
-                                <span className="text-xs font-semibold text-foreground truncate">{item.gift_title}</span>
+                                <span className="text-xs font-bold text-foreground truncate">{item.gift_title}</span>
                               </div>
-                              <div className="text-[11px] mt-0.5">
+
+                              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                 {item.gift_charge_enabled ? (
-                                  <span className="text-primary font-bold">
+                                  <span className="text-xs font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
                                     +৳{Number(item.gift_price || 0)} (মূল্যের সাথে যোগ হয়েছে)
                                   </span>
                                 ) : (
-                                  <span className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-muted-foreground line-through font-medium">৳{Number(item.gift_price || 0)}</span>
-                                    <span className="font-bold text-emerald-700 bg-emerald-100 px-1 rounded">৳০ (ফ্রি!)</span>
-                                    <span className="text-[10px] text-muted-foreground">({Number(item.gift_price || 0)} টাকার গিফট ফ্রি পাচ্ছেন)</span>
-                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                                    <span className="text-muted-foreground line-through font-semibold">৳{Number(item.gift_price || 0)}</span>
+                                    <span className="font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-1.5 py-0.2 rounded shadow-2xs">৳০ (ফ্রি!)</span>
+                                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded">
+                                      সাশ্রয় ৳{Number(item.gift_price || 0)}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             </div>

@@ -196,14 +196,40 @@ const CartDrawer = () => {
                           )}
                         </div>
 
-                        {/* Gift badge if present */}
+                        {/* High-Impact Gift badge if present */}
                         {Boolean(item.has_gift && item.gift_title) && (
-                          <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 font-medium">
-                            <Gift className="h-3 w-3 text-emerald-600 shrink-0" />
-                            <span className="truncate">{item.gift_title}</span>
-                            <span className="shrink-0 font-bold">
-                              {item.gift_charge_enabled ? `(+৳${item.gift_price})` : "(ফ্রি)"}
-                            </span>
+                          <div className="mt-2 bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-amber-500/15 border-2 border-emerald-500/60 rounded-xl p-2 flex items-center gap-2.5 shadow-2xs relative overflow-hidden">
+                            <div className="relative w-9 h-9 rounded-lg bg-white flex-shrink-0 flex items-center justify-center overflow-hidden border border-emerald-300 p-0.5 shadow-2xs">
+                              {item.gift_image ? (
+                                <img src={item.gift_image} alt="" className="w-full h-full object-contain" />
+                              ) : (
+                                <Gift className="h-4 w-4 text-emerald-600" />
+                              )}
+                              <span className="absolute -bottom-0.5 inset-x-0 bg-emerald-600 text-white text-[7px] font-black text-center uppercase tracking-tight">
+                                {item.gift_charge_enabled ? "GIFT" : "FREE"}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-[9px] font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 px-1.5 py-0.2 rounded-full shadow-2xs flex items-center gap-1">
+                                  <Gift className="h-2 w-2 animate-bounce" />
+                                  {item.gift_charge_enabled ? "স্পেশাল গিফট" : "ফ্রি উপহার"}
+                                </span>
+                                <span className="text-[11px] font-bold text-foreground truncate">{item.gift_title}</span>
+                              </div>
+                              <div className="text-[10px] mt-0.5">
+                                {item.gift_charge_enabled ? (
+                                  <span className="text-primary font-bold">
+                                    +৳{Number(item.gift_price || 0)} (যোগ হয়েছে)
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1 flex-wrap">
+                                    <span className="line-through text-muted-foreground">৳{Number(item.gift_price || 0)}</span>
+                                    <span className="font-black text-emerald-700 bg-emerald-100 px-1 rounded">৳০ (ফ্রি!)</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
