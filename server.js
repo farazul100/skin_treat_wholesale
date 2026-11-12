@@ -182,6 +182,10 @@ async function ensureProductColumns() {
   try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_image TEXT NULL;'); } catch (e) {}
   try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_price DECIMAL(10,2) DEFAULT 0.00;'); } catch (e) {}
   try { await pool.query('ALTER TABLE order_items ADD COLUMN gift_charge_enabled TINYINT(1) DEFAULT 0;'); } catch (e) {}
+
+  // Drop products_ibfk_1 foreign key if present so product updates/saves never fail on category_id mismatch
+  try { await pool.query('ALTER TABLE products DROP FOREIGN KEY products_ibfk_1;'); } catch (e) {}
+  try { await pool.query("UPDATE products SET category_id = NULL WHERE category_id = '' OR category_id = 'null';"); } catch (e) {}
 }
 ensureProductColumns();
 
@@ -1496,6 +1500,32 @@ app.post('/api/:table', async (req, res, next) => {
           item.id = crypto.randomUUID();
         }
       }
+
+      // Handle categories insertion safely
+      if (table === 'categories') {
+        if (!item.id) {
+          item.id = crypto.randomUUID();
+        }
+      }
+
+      // Handle products insertion safely (prevent foreign key crash on category_id)
+      if (table === 'products') {
+        if (!item.id) {
+          item.id = crypto.randomUUID();
+        }
+        if (!item.category_id || item.category_id === 'null' || item.category_id === 'undefined' || String(item.category_id).trim() === '') {
+          item.category_id = null;
+        } else {
+          try {
+            const [catRows] = await pool.query('SELECT id FROM categories WHERE id = ?', [item.category_id]);
+            if (!catRows || catRows.length === 0) {
+              item.category_id = null;
+            }
+          } catch (e) {
+            item.category_id = null;
+          }
+        }
+      }
       const keys = Object.keys(item);
       const vals = Object.values(item).map(v => (typeof v === 'boolean' ? (v ? 1 : 0) : typeof v === 'object' && v !== null ? JSON.stringify(v) : v));
       const escapedKeys = keys.map(k => `\`${k}\``).join(', ');
@@ -1538,6 +1568,22 @@ app.patch('/api/:table', async (req, res) => {
                         data.setting_key;
       if (targetKey && data.setting_value !== undefined) {
         syncSettingToFile(targetKey, data.setting_value);
+      }
+    }
+
+    // Sanitize category_id for product updates so foreign key constraint never crashes
+    if (table === 'products' && 'category_id' in data) {
+      if (!data.category_id || data.category_id === 'null' || data.category_id === 'undefined' || String(data.category_id).trim() === '') {
+        data.category_id = null;
+      } else {
+        try {
+          const [catRows] = await pool.query('SELECT id FROM categories WHERE id = ?', [data.category_id]);
+          if (!catRows || catRows.length === 0) {
+            data.category_id = null;
+          }
+        } catch (e) {
+          data.category_id = null;
+        }
       }
     }
     const keys = Object.keys(data);

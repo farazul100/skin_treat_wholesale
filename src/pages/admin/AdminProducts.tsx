@@ -72,7 +72,7 @@ const AdminProducts = () => {
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*").eq("is_active", true);
+      const { data } = await supabase.from("categories").select("*").order("sort_order");
       return data || [];
     },
   });
@@ -198,7 +198,11 @@ const AdminProducts = () => {
       if (ytId && (!video_thumbnail || video_thumbnail.includes("youtube.com/watch") || video_thumbnail.includes("youtu.be/"))) {
         video_thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
       }
-      const payload = { ...data, slug, video_thumbnail };
+      let safeCategoryId = data.category_id;
+      if (!safeCategoryId || safeCategoryId === "" || safeCategoryId === "null" || safeCategoryId === "undefined") {
+        safeCategoryId = null;
+      }
+      const payload = { ...data, slug, video_thumbnail, category_id: safeCategoryId };
       if (editing) {
         const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
         if (error) throw error;
@@ -579,6 +583,9 @@ const AdminProducts = () => {
                   <select className="w-full border rounded-lg px-3 py-2 text-sm bg-background"
                     value={form.category_id || ""} onChange={(e) => setForm({ ...form, category_id: e.target.value || null })}>
                     <option value="">নির্বাচন করুন</option>
+                    {form.category_id && !categories?.some((c: any) => String(c.id) === String(form.category_id)) && (
+                      <option value={form.category_id}>বর্তমান ক্যাটেগরি</option>
+                    )}
                     {categories?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
