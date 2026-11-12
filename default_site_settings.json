@@ -121,6 +121,13 @@
     "image_url": "",
     "link_url": "",
     "title": ""
+  },
+  "system_operational_mode": {
+    "mode": "live",
+    "maintenance_title": "ওয়েবসাইট রক্ষণাবেক্ষণ চলছে",
+    "maintenance_message": "আমাদের ওয়েবসাইটে নিয়মিত আপগ্রেড ও রক্ষণাবেক্ষণের কাজ চলছে। শীঘ্রই আমরা ফিরে আসছি।",
+    "offline_code": "503",
+    "offline_message": "503 Service Temporarily Unavailable. Server connection failed."
   }
 }
 

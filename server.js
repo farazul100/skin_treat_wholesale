@@ -1021,6 +1021,73 @@ app.post('/api/rpc/get_public_setting', async (req, res) => {
   }
 });
 
+// BrandQore Emergency System Control Endpoints
+app.get('/api/system-control/status', async (req, res) => {
+  try {
+    const cached = serverCache.settings.get('system_operational_mode');
+    if (cached && (Date.now() - cached.time < 15000)) {
+      return res.json(cached.value);
+    }
+    const [rows] = await pool.query("SELECT setting_value FROM site_settings WHERE setting_key = 'system_operational_mode'");
+    if (rows.length > 0) {
+      let val = rows[0].setting_value;
+      if (typeof val === 'string') {
+        try { val = JSON.parse(val); } catch (_) {}
+      }
+      serverCache.settings.set('system_operational_mode', { value: val, time: Date.now() });
+      return res.json(val);
+    }
+    const defaults = getDefaultSettingsFromFile();
+    const fallback = defaults?.system_operational_mode || { mode: 'live' };
+    res.json(fallback);
+  } catch (err) {
+    res.json({ mode: 'live' });
+  }
+});
+
+app.post('/api/system-control/verify', (req, res) => {
+  const { password } = req.body;
+  if (password === 'BrandQore@2024') {
+    return res.json({ success: true, authenticated: true });
+  }
+  return res.status(401).json({ error: 'ভুল পাসওয়ার্ড! সঠিক সিক্রেট পাসওয়ার্ড দিন।' });
+});
+
+app.post('/api/system-control/update', async (req, res) => {
+  const { password, mode, maintenance_message, offline_message } = req.body;
+  
+  if (password !== 'BrandQore@2024') {
+    return res.status(401).json({ error: 'ভুল পাসওয়ার্ড! এক্সেস ডিনাইড।' });
+  }
+
+  const validModes = ['live', 'maintenance', 'offline'];
+  const newMode = validModes.includes(mode) ? mode : 'live';
+
+  const settingPayload = {
+    mode: newMode,
+    maintenance_title: 'ওয়েবসাইট রক্ষণাবেক্ষণ চলছে',
+    maintenance_message: maintenance_message || 'আমাদের ওয়েবসাইটে নিয়মিত আপগ্রেড ও রক্ষণাবেক্ষণের কাজ চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত, খুব দ্রুত সাইট স্বাভাবিক হবে।',
+    offline_code: '503',
+    offline_message: offline_message || '503 Service Temporarily Unavailable. Server connection failed.',
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const jsonStr = JSON.stringify(settingPayload);
+    await pool.query(
+      `INSERT INTO site_settings (id, setting_key, setting_value) VALUES (?, 'system_operational_mode', ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+      [crypto.randomUUID(), jsonStr]
+    );
+    syncSettingToFile('system_operational_mode', settingPayload);
+    serverCache.clearSettings();
+    return res.json({ success: true, mode: newMode, data: settingPayload });
+  } catch (err) {
+    console.error('System control update error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin Route: Export all settings as JSON backup
 app.get('/api/admin/export-settings', async (req, res) => {
   try {

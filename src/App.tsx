@@ -35,10 +35,12 @@ import AdminReviews from "./pages/admin/AdminReviews";
 import AdminShefaTube from "./pages/admin/AdminShefaTube";
 import InvoicePrint from "./pages/admin/InvoicePrint";
 import PolicyPage from "./pages/PolicyPage";
+import EmergencyControlPage from "./pages/EmergencyControlPage";
 import CodeSnippetInjector from "./components/CodeSnippetInjector";
 import BottomNav from "./components/BottomNav";
 import FaviconManager from "./components/FaviconManager";
 import StorefrontFloatingWidgets from "./components/StorefrontFloatingWidgets";
+import SystemOperationalGuard from "./components/SystemOperationalGuard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -73,6 +75,9 @@ const AppRoutes = () => {
       <Route path="/page/:slug" element={<PolicyPage />} />
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/admin/invoice-print" element={<InvoicePrint />} />
+      {/* BrandQore Privileged Master Control (Unlinked secret routes) */}
+      <Route path="/brandqore-control" element={<EmergencyControlPage />} />
+      <Route path="/brandqore-vault" element={<EmergencyControlPage />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         {categoriesEnabled && <Route path="categories" element={<AdminCategories />} />}
@@ -103,11 +108,13 @@ const App = () => (
             <Toaster />
             <Sonner />
           <BrowserRouter>
-            <CodeSnippetInjector />
-            <FaviconManager />
-            <AppRoutes />
-            <StorefrontFloatingWidgets />
-            <BottomNav />
+            <SystemOperationalGuard>
+              <CodeSnippetInjector />
+              <FaviconManager />
+              <AppRoutes />
+              <StorefrontFloatingWidgets />
+              <BottomNav />
+            </SystemOperationalGuard>
           </BrowserRouter>
           </TooltipProvider>
         </CartProvider>
