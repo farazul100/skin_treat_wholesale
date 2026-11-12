@@ -16,13 +16,17 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">, qty?: number) => void;
+  addItem: (item: Omit<CartItem, "quantity">, qty?: number, openDrawer?: boolean) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
   getItemUnitPrice: (item: CartItem) => number;
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  toggleCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -32,6 +36,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
   });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
+  const toggleCart = () => setIsCartOpen((prev) => !prev);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
@@ -43,7 +52,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return base + giftExtra;
   };
 
-  const addItem = (item: Omit<CartItem, "quantity">, qty = 1) => {
+  const addItem = (item: Omit<CartItem, "quantity">, qty = 1, openDrawer = true) => {
     const safeQty = Math.max(1, qty);
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
@@ -61,6 +70,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
       return [...prev, { ...item, quantity: safeQty }];
     });
+    if (openDrawer) {
+      setIsCartOpen(true);
+    }
     // Facebook Pixel AddToCart
     const effectivePrice = getItemUnitPrice({ ...item, quantity: safeQty } as CartItem);
     window.fbq?.("track", "AddToCart", {
@@ -90,7 +102,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const totalPrice = items.reduce((sum, i) => sum + getItemUnitPrice(i) * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, getItemUnitPrice }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, getItemUnitPrice, isCartOpen, openCart, closeCart, toggleCart }}>
       {children}
     </CartContext.Provider>
   );

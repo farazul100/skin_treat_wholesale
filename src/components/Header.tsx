@@ -17,7 +17,7 @@ const navItems = [
 
 const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { totalItems, openCart } = useCart();
   const { user } = useAuth();
 
   const { data: logoData } = useQuery({
@@ -178,16 +178,20 @@ const Header = () => {
             <Button variant="ghost" size="icon" className="h-10 w-10 md:h-11 md:w-11" onClick={() => setSearchOpen(!searchOpen)}>
               <Search className="h-5 w-5 md:h-6 md:w-6" />
             </Button>
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative h-10 w-10 md:h-11 md:w-11">
-                <ShoppingCart className="h-5 w-5 md:h-6 md:w-6" />
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-10 w-10 md:h-11 md:w-11"
+              onClick={openCart}
+              title="শপিং কার্ট"
+            >
+              <ShoppingCart className="h-5 w-5 md:h-6 md:w-6" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Button>
             <Link to={user ? "/dashboard" : "/auth"}>
               <Button variant="ghost" size="icon" className="h-10 w-10 md:h-11 md:w-11">
                 <User className="h-5 w-5 md:h-6 md:w-6" />

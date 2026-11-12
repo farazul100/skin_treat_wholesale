@@ -38,6 +38,7 @@ import PolicyPage from "./pages/PolicyPage";
 import CodeSnippetInjector from "./components/CodeSnippetInjector";
 import BottomNav from "./components/BottomNav";
 import FaviconManager from "./components/FaviconManager";
+import StorefrontFloatingWidgets from "./components/StorefrontFloatingWidgets";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -105,6 +106,7 @@ const App = () => (
             <CodeSnippetInjector />
             <FaviconManager />
             <AppRoutes />
+            <StorefrontFloatingWidgets />
             <BottomNav />
           </BrowserRouter>
           </TooltipProvider>

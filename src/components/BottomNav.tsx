@@ -44,7 +44,7 @@ const openExternalLink = (event: MouseEvent<HTMLAnchorElement>, href?: string) =
 
 const BottomNav = () => {
   const location = useLocation();
-  const { totalItems } = useCart();
+  const { totalItems, openCart } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const { data: whatsappValue } = useQuery({
@@ -97,7 +97,11 @@ const BottomNav = () => {
             <span className="text-[10px] font-medium text-primary mt-8">Search</span>
           </div>
 
-          <Link to="/cart" className={`flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 flex-1 relative ${isActive("/cart") ? "text-primary" : "text-muted-foreground"}`}>
+          <button
+            type="button"
+            onClick={openCart}
+            className={`flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 flex-1 relative ${isActive("/cart") ? "text-primary" : "text-muted-foreground"}`}
+          >
             <div className="relative">
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
@@ -107,7 +111,7 @@ const BottomNav = () => {
               )}
             </div>
             <span className="text-[10px] font-medium">Cart</span>
-          </Link>
+          </button>
 
           <a
             href={whatsappHref || "#"}
