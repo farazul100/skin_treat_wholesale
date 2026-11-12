@@ -4,9 +4,9 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { Upload, Loader2, Trash2, Copy, ExternalLink, ShieldCheck, Eye, EyeOff, CreditCard, RefreshCw, Download } from "lucide-react";
+import { Upload, Loader2, Trash2, Copy, ExternalLink, ShieldCheck, Eye, EyeOff, CreditCard, RefreshCw, Download, Save, FileJson } from "lucide-react";
 import { applyThemeColor } from "@/lib/theme";
 
 const FaviconUpload = ({ settings, updateMutation }: { settings: any; updateMutation: any }) => {
@@ -326,6 +326,153 @@ const MetaCatalogFeedCard = () => {
   );
 };
 
+const SettingsPersistenceCard = () => {
+  const queryClient = useQueryClient();
+  const [downloading, setDownloading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/admin/export-settings");
+      if (!res.ok) throw new Error("ব্যাকআপ নিতে সমস্যা হয়েছে");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data.settings || data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `store-settings-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("সেটিংস ব্যাকআপ ফাইল সফলভাবে ডাউনলোড হয়েছে");
+    } catch (err: any) {
+      toast.error(err.message || "ব্যাকআপ ডাউনলোডে সমস্যা হয়েছে");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoring(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const settingsPayload = parsed.settings || parsed;
+
+      const res = await fetch("/api/admin/restore-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsPayload),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "রিস্টোর ব্যর্থ হয়েছে");
+
+      toast.success(result.message || "সকল সেটিংস সফলভাবে রিস্টোর ও সেভ হয়েছে!");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["site-logo"] });
+      queryClient.invalidateQueries({ queryKey: ["theme-color"] });
+      queryClient.invalidateQueries({ queryKey: ["site-favicon"] });
+      queryClient.invalidateQueries({ queryKey: ["site-title"] });
+      queryClient.invalidateQueries({ queryKey: ["footer-content"] });
+    } catch (err: any) {
+      toast.error(err.message || "ভুল JSON ফাইল! সঠিক ব্যাকআপ ফাইল সিলেক্ট করুন");
+    } finally {
+      setRestoring(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSyncDefaults = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/sync-defaults", { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "ডিফল্ট সেভ ব্যর্থ হয়েছে");
+      toast.success(result.message || "বর্তমান সেটিংস সার্ভার ডিফল্ট ফাইলে সেভ হয়েছে!");
+    } catch (err: any) {
+      toast.error(err.message || "ডিফল্ট সেভ করতে সমস্যা হয়েছে");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-emerald-500/10 via-primary/10 to-teal-500/10 border-2 border-emerald-500/30 rounded-xl p-5 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <h3 className="font-bold text-foreground text-base">সেটিংস অটো-সেভ, ব্যাকআপ ও রিস্টোর</h3>
+            <span className="bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold px-2 py-0.5 rounded-full">
+              পারসিস্টেন্ট সেভ অন
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            সাইট নতুন করে ডিপ্লয় হলেও এই সেটিংস নষ্ট হবে না। আপনি চাইলে যে কোনো সময় এক ক্লিকে ব্যাকআপ ফাইল নামিয়ে রাখতে পারেন এবং নতুন ডিপ্লয়মেন্টে রিস্টোর করতে পারেন।
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-emerald-500/20">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          disabled={downloading}
+          className="gap-1.5 text-xs bg-background/80 hover:bg-background"
+        >
+          {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+          সেটিংস ব্যাকআপ ডাউনলোড (JSON)
+        </Button>
+
+        <label className="cursor-pointer inline-flex">
+          <input
+            type="file"
+            accept=".json,application/json"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={restoring}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            asChild
+            disabled={restoring}
+            className="gap-1.5 text-xs bg-background/80 hover:bg-background cursor-pointer"
+          >
+            <span>
+              {restoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {restoring ? "রিস্টোর হচ্ছে..." : "ব্যাকআপ রিস্টোর করুন"}
+            </span>
+          </Button>
+        </label>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleSyncDefaults}
+          disabled={syncing}
+          className="gap-1.5 text-xs"
+          title="বর্তমান সেটিংসকে সার্ভার ফাইলে সেভ করুন যাতে সব ডিপ্লয়মেন্টে এটিই ডিফল্ট থাকে"
+        >
+          {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          বর্তমান সেটিংস পার্মানেন্ট ডিফল্ট করুন
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const AdminSettings = () => {
   const queryClient = useQueryClient();
 
@@ -334,7 +481,13 @@ const AdminSettings = () => {
     queryFn: async () => {
       const { data } = await supabase.from("site_settings").select("*");
       const map: Record<string, any> = {};
-      data?.forEach((s: any) => { map[s.key || s.setting_key] = { id: s.id, value: s.value || s.setting_value }; });
+      data?.forEach((s: any) => {
+        let val = s.value !== undefined ? s.value : s.setting_value;
+        if (typeof val === "string") {
+          try { val = JSON.parse(val); } catch (_) {}
+        }
+        map[s.key || s.setting_key] = { id: s.id, value: val };
+      });
       return map;
     },
   });
@@ -519,7 +672,10 @@ const AdminSettings = () => {
     <div>
       <h1 className="text-2xl font-bold text-foreground mb-6 md:text-center">সেটিংস</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl md:mx-auto">
+      <div className="max-w-4xl md:mx-auto">
+        <SettingsPersistenceCard />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Col 1 */}
         <div className="space-y-6">
           {/* Site Logo */}
@@ -1105,6 +1261,7 @@ const AdminSettings = () => {
           {/* Meta Catalog Feed */}
           <MetaCatalogFeedCard />
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,0 +1,119 @@
+{
+  "site_title": {
+    "title": "Sunnahly"
+  },
+  "site_logo": {
+    "url": "",
+    "invert_on_white": false
+  },
+  "site_favicon": {
+    "url": "/placeholder.svg"
+  },
+  "theme_color": {
+    "primary_hex": "#1f7a2e",
+    "footer_hex": "#1f7a2e"
+  },
+  "delivery_charge": {
+    "inside_dhaka": 60,
+    "outside_dhaka": 120
+  },
+  "partial_payment_percent": {
+    "percent": 10
+  },
+  "categories_enabled": {
+    "enabled": true
+  },
+  "category_grid": {
+    "desktop": 6,
+    "mobile": 3,
+    "title": "Featured Categories"
+  },
+  "topbar_texts": {
+    "texts": [
+      "সারাদেশে দ্রুত হোম ডেলিভারি",
+      "১০০% খাঁটি ও প্রাকৃতিক পণ্যের নিশ্চয়তা",
+      "ক্যাশ অন ডেলিভারি সুবিধা",
+      "অর্ডার সংক্রান্ত তথ্যের জন্য কল করুন"
+    ]
+  },
+  "footer_content": {
+    "brand_description": "বাংলাদেশের সেরা প্রাকৃতিক ও অর্গানিক পণ্যের অনলাইন শপ। ১০০% খাঁটি পণ্যের নিশ্চয়তা।",
+    "quick_links": [
+      { "label": "আমাদের সম্পর্কে", "href": "/page/about" },
+      { "label": "সকল পণ্য", "href": "/products" },
+      { "label": "যোগাযোগ", "href": "/page/contact" },
+      { "label": "সকল ক্যাটাগরি", "href": "/categories" }
+    ],
+    "policy_links": [
+      { "label": "প্রাইভেসি পলিসি", "href": "/page/privacy" },
+      { "label": "শর্তাবলী", "href": "/page/terms" },
+      { "label": "রিফান্ড পলিসি", "href": "/page/refund" },
+      { "label": "শিপিং পলিসি", "href": "/page/shipping" }
+    ],
+    "phone": "০১XXXXXXXXX",
+    "email": "info@naturalshefa.com",
+    "address": "ঢাকা, বাংলাদেশ",
+    "copyright": "© ২০২৬ Sunnahly। সর্বস্বত্ব সংরক্ষিত।"
+  },
+  "promo_banners": {
+    "banner1": {
+      "subtitle": "সীমিত সময়ের অফার",
+      "title": "বিশেষ ছাড়",
+      "description": "সকল প্রিমিয়াম পণ্যে বিশেষ ছাড়। অফার সীমিত সময়ের জন্য।",
+      "button_text": "এখনই কিনুন",
+      "button_link": "/products"
+    },
+    "banner2": {
+      "subtitle": "নতুন কালেকশন",
+      "title": "অর্গানিক আইটেম",
+      "description": "প্রাকৃতিক উপাদানে তৈরি পণ্যসমূহের নতুন সংগ্রহ এসেছে।",
+      "button_text": "দেখুন",
+      "button_link": "/products"
+    }
+  },
+  "social_media": {
+    "facebook": "",
+    "instagram": "",
+    "youtube": "",
+    "whatsapp": ""
+  },
+  "payment_gateway": {
+    "enabled": false,
+    "provider": "eps",
+    "mode": "sandbox",
+    "username": "",
+    "password": "",
+    "hash_key": "",
+    "merchant_id": "",
+    "store_id": "",
+    "api_url": "https://pgapi.eps.com.bd"
+  },
+  "facebook_pixel": {
+    "enabled": false,
+    "pixel_id": "",
+    "access_token": "",
+    "test_event_code": ""
+  },
+  "cloudinary": {
+    "cloud_name": "",
+    "upload_preset": ""
+  },
+  "steadfast": {
+    "api_key": "",
+    "secret_key": ""
+  },
+  "whatsapp_number": {
+    "number": ""
+  },
+  "order_webhook": {
+    "enabled": false,
+    "url": "",
+    "secret_key": ""
+  },
+  "og_banner": {
+    "url": ""
+  },
+  "social_share_banner": {
+    "url": ""
+  }
+}

@@ -29,7 +29,13 @@ const AdminPages = () => {
       const keys = pages.map(p => p.key);
       const { data } = await supabase.from("site_settings").select("*").in("key", keys);
       const map: Record<string, any> = {};
-      data?.forEach((s: any) => { map[s.key || s.setting_key] = s.value || s.setting_value; });
+      data?.forEach((s: any) => {
+        let val = s.value !== undefined ? s.value : s.setting_value;
+        if (typeof val === "string") {
+          try { val = JSON.parse(val); } catch (_) {}
+        }
+        map[s.key || s.setting_key] = val;
+      });
       return map;
     },
   });

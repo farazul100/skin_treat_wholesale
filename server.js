@@ -248,6 +248,77 @@ async function ensureAdminAuthTables() {
 }
 ensureAdminAuthTables();
 
+// Helper to read persistent default settings from file
+function getDefaultSettingsFromFile() {
+  try {
+    const defaultSettingsPath = path.join(__dirname, 'default_site_settings.json');
+    if (fs.existsSync(defaultSettingsPath)) {
+      return JSON.parse(fs.readFileSync(defaultSettingsPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn("Could not read default_site_settings.json:", e.message);
+  }
+  return null;
+}
+
+// Helper to keep default_site_settings.json synced whenever settings change
+function syncSettingToFile(key, value) {
+  try {
+    const defaultSettingsPath = path.join(__dirname, 'default_site_settings.json');
+    let currentData = {};
+    if (fs.existsSync(defaultSettingsPath)) {
+      try {
+        currentData = JSON.parse(fs.readFileSync(defaultSettingsPath, 'utf8'));
+      } catch (_) {}
+    }
+    let parsedVal = value;
+    if (typeof value === 'string') {
+      try { parsedVal = JSON.parse(value); } catch (_) {}
+    }
+    currentData[key] = parsedVal;
+    fs.writeFileSync(defaultSettingsPath, JSON.stringify(currentData, null, 2), 'utf8');
+  } catch (e) {
+    console.warn("Failed to sync setting to file:", e.message);
+  }
+}
+
+// Auto-ensure site_settings table exists and seed from default_site_settings.json if empty or missing keys
+async function ensureSiteSettingsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        id VARCHAR(64) PRIMARY KEY,
+        setting_key VARCHAR(191) NOT NULL UNIQUE,
+        setting_value LONGTEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("site_settings table ensured");
+
+    const defaultSettings = getDefaultSettingsFromFile();
+    if (defaultSettings) {
+      const [existingRows] = await pool.query('SELECT setting_key FROM site_settings');
+      const existingKeys = new Set(existingRows.map(r => r.setting_key));
+
+      for (const [key, val] of Object.entries(defaultSettings)) {
+        if (!existingKeys.has(key)) {
+          const id = crypto.randomUUID();
+          const valStr = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val || '');
+          await pool.query(
+            'INSERT INTO site_settings (id, setting_key, setting_value) VALUES (?, ?, ?)',
+            [id, key, valStr]
+          );
+          console.log(`Seeded default setting: ${key}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.log("Note on site_settings table:", err.message);
+  }
+}
+ensureSiteSettingsTable();
+
 function buildWhereClause(query, table = '', alias = '') {
   let whereParts = [];
   let values = [];
@@ -844,6 +915,26 @@ app.get('/api/:table', async (req, res, next) => {
         console.warn("Could not load order_items for orders:", err.message);
       }
     }
+    if (table === 'site_settings') {
+      const parsedRows = rows.map(r => {
+        let val = r.setting_value !== undefined ? r.setting_value : r.value;
+        if (typeof val === 'string') {
+          try { val = JSON.parse(val); } catch (e) {}
+        }
+        return {
+          id: r.id,
+          key: r.setting_key || r.key,
+          setting_key: r.setting_key || r.key,
+          value: val,
+          setting_value: val,
+          created_at: r.created_at,
+          updated_at: r.updated_at
+        };
+      });
+      if (req.query.single) return res.json(parsedRows[0] || null);
+      return res.json(parsedRows);
+    }
+
     if (req.query.single) return res.json(rows[0] || null);
     res.json(rows);
   } catch (error) {
@@ -851,7 +942,7 @@ app.get('/api/:table', async (req, res, next) => {
   }
 });
 
-// RPC route for get_public_setting with memory caching
+// RPC route for get_public_setting with memory caching & fallback to default_site_settings.json
 app.post('/api/rpc/get_public_setting', async (req, res) => {
   const { _key } = req.body;
   if (!_key) return res.json(null);
@@ -869,13 +960,105 @@ app.post('/api/rpc/get_public_setting', async (req, res) => {
         try { val = JSON.parse(val); } catch (e) {}
       }
       serverCache.settings.set(_key, { value: val, time: Date.now() });
-      res.json(val);
-    } else {
-      serverCache.settings.set(_key, { value: null, time: Date.now() });
-      res.json(null);
+      return res.json(val);
     }
+    
+    // Fallback to default_site_settings.json if key not in DB
+    const fileDefaults = getDefaultSettingsFromFile();
+    if (fileDefaults && fileDefaults[_key] !== undefined) {
+      serverCache.settings.set(_key, { value: fileDefaults[_key], time: Date.now() });
+      return res.json(fileDefaults[_key]);
+    }
+
+    serverCache.settings.set(_key, { value: null, time: Date.now() });
+    res.json(null);
   } catch (error) {
+    const fileDefaults = getDefaultSettingsFromFile();
+    if (fileDefaults && fileDefaults[_key] !== undefined) {
+      return res.json(fileDefaults[_key]);
+    }
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin Route: Export all settings as JSON backup
+app.get('/api/admin/export-settings', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value FROM site_settings');
+    const settingsMap = {};
+    for (const r of rows) {
+      let val = r.setting_value;
+      if (typeof val === 'string') {
+        try { val = JSON.parse(val); } catch (_) {}
+      }
+      settingsMap[r.setting_key] = val;
+    }
+    const fileDefaults = getDefaultSettingsFromFile() || {};
+    const merged = { ...fileDefaults, ...settingsMap };
+
+    if (req.query.download) {
+      const filename = `store-settings-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/json');
+    }
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      settings: merged
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Route: Restore settings from JSON backup
+app.post('/api/admin/restore-settings', async (req, res) => {
+  try {
+    const payload = req.body;
+    const settings = payload.settings || payload;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ error: 'ভুল ফরম্যাট: সেটিংস অবজেক্ট পাওয়া যায়নি' });
+    }
+
+    let count = 0;
+    for (const [key, val] of Object.entries(settings)) {
+      if (key === 'success' || key === 'timestamp' || key === 'version') continue;
+      const id = crypto.randomUUID();
+      const valStr = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val !== undefined ? val : '');
+      await pool.query(
+        `INSERT INTO site_settings (id, setting_key, setting_value) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+        [id, key, valStr]
+      );
+      syncSettingToFile(key, val);
+      count++;
+    }
+
+    serverCache.clearSettings();
+    res.json({ success: true, count, message: `${count}টি সেটিংস সফলভাবে রিস্টোর ও সেভ হয়েছে` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Route: Save current live database settings to default_site_settings.json
+app.post('/api/admin/sync-defaults', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value FROM site_settings');
+    const settingsMap = {};
+    for (const r of rows) {
+      let val = r.setting_value;
+      if (typeof val === 'string') {
+        try { val = JSON.parse(val); } catch (_) {}
+      }
+      settingsMap[r.setting_key] = val;
+    }
+    const defaultSettingsPath = path.join(__dirname, 'default_site_settings.json');
+    fs.writeFileSync(defaultSettingsPath, JSON.stringify(settingsMap, null, 2), 'utf8');
+    res.json({ success: true, message: 'বর্তমান সেটিংস সফলভাবে সার্ভার ডিফল্ট ফাইলে সেভ হয়েছে' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1212,16 +1395,21 @@ app.post('/api/:table', async (req, res, next) => {
   try {
     const results = [];
     for (const item of items) {
-      // Handle the 'key' to 'setting_key' mapping for insert
+      // Handle site_settings insertion safely with ON DUPLICATE KEY UPDATE to prevent duplicate key errors
       if (table === 'site_settings') {
-        if (item.key !== undefined) {
-          item.setting_key = item.key;
-          delete item.key;
-        }
-        if (item.value !== undefined) {
-          item.setting_value = item.value;
-          delete item.value;
-        }
+        const sKey = item.setting_key !== undefined ? item.setting_key : item.key;
+        let sVal = item.setting_value !== undefined ? item.setting_value : item.value;
+        const sId = item.id || crypto.randomUUID();
+        const valStr = typeof sVal === 'object' && sVal !== null ? JSON.stringify(sVal) : String(sVal !== undefined ? sVal : '');
+
+        await pool.query(
+          `INSERT INTO site_settings (id, setting_key, setting_value) VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+          [sId, sKey, valStr]
+        );
+        syncSettingToFile(sKey, sVal);
+        results.push({ id: sId, key: sKey, setting_key: sKey, value: sVal, setting_value: sVal });
+        continue;
       }
 
       // Handle orders insertion safely
@@ -1308,6 +1496,12 @@ app.patch('/api/:table', async (req, res) => {
       if (data.value !== undefined) {
         data.setting_value = data.value;
         delete data.value;
+      }
+      const targetKey = (req.query.key?.startsWith('eq.') ? req.query.key.slice(3) : req.query.key) ||
+                        (req.query.setting_key?.startsWith('eq.') ? req.query.setting_key.slice(3) : req.query.setting_key) ||
+                        data.setting_key;
+      if (targetKey && data.setting_value !== undefined) {
+        syncSettingToFile(targetKey, data.setting_value);
       }
     }
     const keys = Object.keys(data);
