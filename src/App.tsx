@@ -40,7 +40,17 @@ import BottomNav from "./components/BottomNav";
 import FaviconManager from "./components/FaviconManager";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes fresh
+      gcTime: 1000 * 60 * 30, // 30 minutes cache
+      refetchOnWindowFocus: false, // Prevent continuous refetching on window focus
+      refetchOnMount: false, // Use cached data immediately if available
+      retry: 1,
+    },
+  },
+});
 
 import { useCategoriesEnabled } from "./hooks/useCategoriesEnabled";
 

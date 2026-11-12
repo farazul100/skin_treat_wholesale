@@ -180,9 +180,9 @@ const HomeCategorySections = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Fetch active products
+  // Fetch active products (shared key for request deduplication)
   const { data: allProducts } = useQuery({
-    queryKey: ["home-categorized-products"],
+    queryKey: ["storefront-products"],
     queryFn: async () => {
       const { data } = await supabase
         .from("products")

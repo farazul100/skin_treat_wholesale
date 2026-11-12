@@ -61,14 +61,23 @@ const AdminLayout = () => {
   const categoriesEnabled = useCategoriesEnabled();
   const navItems = baseNavItems.filter((i: any) => !i.requiresCategories || categoriesEnabled);
 
-  const { data: logoUrl } = useQuery({
+  const { data: logoData } = useQuery({
     queryKey: ["site-logo"],
     queryFn: async () => {
       const { data } = await supabase.from("site_settings").select("*").eq("key", "site_logo").single();
-      return ((data?.value || data?.setting_value) as any)?.url || "";
+      const val = data?.value || data?.setting_value;
+      if (!val) return { url: "", invert_on_white: false };
+      if (typeof val === "string") return { url: val, invert_on_white: false };
+      return {
+        url: (val as any)?.url || "",
+        invert_on_white: !!(val as any)?.invert_on_white,
+      };
     },
     staleTime: 1000 * 60 * 10,
   });
+
+  const logoUrl = logoData?.url || "";
+  const invertOnWhite = !!logoData?.invert_on_white;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   if (!user || !isAdmin) return <Navigate to="/admin-login" />;
@@ -79,7 +88,12 @@ const AdminLayout = () => {
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-60 bg-card border-r flex-col z-40">
         <div className="p-4 border-b">
           {logoUrl && (
-            <img src={logoUrl} alt="Logo" className="h-8 w-auto object-contain mb-1" />
+            <img
+              src={logoUrl}
+              alt="Logo"
+              className="h-8 w-auto object-contain mb-1"
+              style={invertOnWhite ? { filter: "brightness(0)" } : undefined}
+            />
           )}
           <p className="text-xs text-muted-foreground">অ্যাডমিন প্যানেল</p>
         </div>

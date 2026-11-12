@@ -36,6 +36,8 @@ const Footer = () => {
     queryKey: ["site-logo"],
     queryFn: async () => {
       const { data } = await supabase.rpc("get_public_setting", { _key: "site_logo" });
+      if (!data) return "";
+      if (typeof data === "string") return data;
       return (data as any)?.url || "";
     },
     staleTime: 1000 * 60 * 10,

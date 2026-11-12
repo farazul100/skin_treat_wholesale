@@ -36,7 +36,7 @@ const OrderSuccess = () => {
         supabase.rpc("get_public_setting", { _key: "footer_content" }),
       ]);
       return {
-        logoUrl: (logoRes.data as any)?.url || "",
+        logoUrl: (logoRes.data as any)?.url || (typeof logoRes.data === "string" ? logoRes.data : ""),
         phone: (footerRes.data as any)?.phone || "",
         email: (footerRes.data as any)?.email || "",
         address: (footerRes.data as any)?.address || "",

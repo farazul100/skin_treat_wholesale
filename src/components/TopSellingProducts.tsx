@@ -12,7 +12,7 @@ const TopSellingProducts = () => {
   const navigate = useNavigate();
 
   const { data: products } = useQuery({
-    queryKey: ["top-selling-products"],
+    queryKey: ["storefront-products"],
     queryFn: async () => {
       const { data } = await supabase
         .from("products")

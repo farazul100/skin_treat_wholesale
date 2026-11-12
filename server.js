@@ -82,16 +82,40 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Create Database Connection Pool
+// Create Database Connection Pool with high concurrency and keepalive
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  port: Number(process.env.DB_PORT) || 3306,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  connectionLimit: 50,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000
 });
+
+// High-speed In-Memory Cache to serve storefront requests in 0-1ms
+const serverCache = {
+  settings: new Map(),
+  categories: null,
+  categoriesTime: 0,
+  heroSlides: null,
+  heroSlidesTime: 0,
+  products: null,
+  productsTime: 0,
+  clearSettings() { this.settings.clear(); },
+  clearCategories() { this.categories = null; this.categoriesTime = 0; },
+  clearHeroSlides() { this.heroSlides = null; this.heroSlidesTime = 0; },
+  clearProducts() { this.products = null; this.productsTime = 0; },
+  clearAll() {
+    this.settings.clear();
+    this.categories = null;
+    this.heroSlides = null;
+    this.products = null;
+  }
+};
 
 // Auto-ensure categories.show_on_home column exists
 async function ensureCategoryColumns() {
@@ -264,6 +288,11 @@ function buildWhereClause(query, table = '', alias = '') {
 // Route: Get Products (handles filtering, sorting, limits, categories join)
 app.get('/api/products', async (req, res, next) => {
   try {
+    const isPublicDefault = !req.query.single && !req.query.limit && (!req.query || Object.keys(req.query).length === 0 || (Object.keys(req.query).length === 1 && req.query.is_active === 'eq.true'));
+    if (isPublicDefault && serverCache.products && (Date.now() - serverCache.productsTime < 60000)) {
+      return res.json(serverCache.products);
+    }
+
     const { whereClause, values } = buildWhereClause(req.query, 'products', 'p.');
     
     let orderClause = 'ORDER BY p.sort_order ASC, p.created_at DESC';
@@ -303,6 +332,11 @@ app.get('/api/products', async (req, res, next) => {
       };
     });
     
+    if (isPublicDefault) {
+      serverCache.products = formatted;
+      serverCache.productsTime = Date.now();
+    }
+
     if (req.query.single) {
       return res.json(formatted[0] || null);
     }
@@ -316,6 +350,11 @@ app.get('/api/products', async (req, res, next) => {
 // Route: Get Categories
 app.get('/api/categories', async (req, res, next) => {
   try {
+    const isPublicDefault = !req.query.single && !req.query.limit && (!req.query || Object.keys(req.query).length === 0 || (Object.keys(req.query).length === 1 && req.query.is_active === 'eq.true'));
+    if (isPublicDefault && serverCache.categories && (Date.now() - serverCache.categoriesTime < 120000)) {
+      return res.json(serverCache.categories);
+    }
+
     const { whereClause, values } = buildWhereClause(req.query, 'categories');
     let orderClause = 'ORDER BY sort_order ASC, created_at DESC';
     if (req.query.order) {
@@ -334,6 +373,11 @@ app.get('/api/categories', async (req, res, next) => {
     }
 
     const [rows] = await pool.query(`SELECT * FROM categories ${finalWhere} ${orderClause} ${limitClause}`, values);
+    if (isPublicDefault) {
+      serverCache.categories = rows;
+      serverCache.categoriesTime = Date.now();
+    }
+
     if (req.query.single) return res.json(rows[0] || null);
     res.json(rows);
   } catch (error) {
@@ -807,9 +851,16 @@ app.get('/api/:table', async (req, res, next) => {
   }
 });
 
-// RPC route for get_public_setting
+// RPC route for get_public_setting with memory caching
 app.post('/api/rpc/get_public_setting', async (req, res) => {
   const { _key } = req.body;
+  if (!_key) return res.json(null);
+
+  const cached = serverCache.settings.get(_key);
+  if (cached && (Date.now() - cached.time < 5 * 60 * 1000)) {
+    return res.json(cached.value);
+  }
+
   try {
     const [rows] = await pool.query('SELECT setting_value FROM site_settings WHERE setting_key = ?', [_key]);
     if (rows.length > 0) {
@@ -817,8 +868,10 @@ app.post('/api/rpc/get_public_setting', async (req, res) => {
       if (typeof val === 'string') {
         try { val = JSON.parse(val); } catch (e) {}
       }
+      serverCache.settings.set(_key, { value: val, time: Date.now() });
       res.json(val);
     } else {
+      serverCache.settings.set(_key, { value: null, time: Date.now() });
       res.json(null);
     }
   } catch (error) {
@@ -1227,6 +1280,10 @@ app.post('/api/:table', async (req, res, next) => {
       const returnedId = item.id || (result.insertId > 0 ? result.insertId : undefined);
       results.push({ ...item, id: returnedId });
     }
+    if (table === 'site_settings') serverCache.clearSettings();
+    else if (table === 'categories') serverCache.clearCategories();
+    else if (table === 'products') serverCache.clearProducts();
+    else if (table === 'hero_slides') serverCache.clearHeroSlides();
     res.json(Array.isArray(data) ? results : results[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1258,6 +1315,10 @@ app.patch('/api/:table', async (req, res) => {
     const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
     
     await pool.query(`UPDATE ?? SET ${setClause} ${whereClause}`, [table, ...setVals, ...values]);
+    if (table === 'site_settings') serverCache.clearSettings();
+    else if (table === 'categories') serverCache.clearCategories();
+    else if (table === 'products') serverCache.clearProducts();
+    else if (table === 'hero_slides') serverCache.clearHeroSlides();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1272,6 +1333,10 @@ app.delete('/api/:table', async (req, res) => {
   
   try {
     await pool.query(`DELETE FROM ?? ${whereClause}`, [table, ...values]);
+    if (table === 'site_settings') serverCache.clearSettings();
+    else if (table === 'categories') serverCache.clearCategories();
+    else if (table === 'products') serverCache.clearProducts();
+    else if (table === 'hero_slides') serverCache.clearHeroSlides();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

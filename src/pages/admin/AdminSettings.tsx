@@ -365,6 +365,8 @@ const AdminSettings = () => {
   const [steadfastSecretKey, setSteadfastSecretKey] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
+  const [invertOnWhite, setInvertOnWhite] = useState(false);
+  const [logoPreviewDark, setLogoPreviewDark] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
@@ -402,7 +404,13 @@ const AdminSettings = () => {
       setUploadPreset(settings.cloudinary?.value?.upload_preset || "");
       setSteadfastApiKey(settings.steadfast?.value?.api_key || "");
       setSteadfastSecretKey(settings.steadfast?.value?.secret_key || "");
-      setLogoUrl(settings.site_logo?.value?.url || "");
+      const logoSetting = settings.site_logo?.value;
+      if (typeof logoSetting === "object") {
+        setLogoUrl(logoSetting?.url || "");
+        setInvertOnWhite(Boolean(logoSetting?.invert_on_white));
+      } else {
+        setLogoUrl(logoSetting || "");
+      }
       setWhatsappNumber(settings.whatsapp_number?.value?.number || "");
       setWebhookUrl(settings.order_webhook?.value?.url || "");
       setWebhookSecret(settings.order_webhook?.value?.secret_key || "");
@@ -478,13 +486,13 @@ const AdminSettings = () => {
       const result = await res.json();
       const url = result.secure_url;
       setLogoUrl(url);
-      updateMutation.mutate({ key: "site_logo", value: { url } });
+      updateMutation.mutate({ key: "site_logo", value: { url, invert_on_white: invertOnWhite } });
     } catch {
       toast.error("লোগো আপলোড ব্যর্থ");
     } finally {
       setLogoUploading(false);
     }
-  }, [settings]);
+  }, [settings, invertOnWhite]);
 
   const updateMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
@@ -499,6 +507,7 @@ const AdminSettings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["site-logo"] });
       queryClient.invalidateQueries({ queryKey: ["theme-color"] });
       queryClient.invalidateQueries({ queryKey: ["site-favicon"] });
       queryClient.invalidateQueries({ queryKey: ["site-title"] });
@@ -520,32 +529,79 @@ const AdminSettings = () => {
               <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 300×80 px</span>
             </div>
             <p className="text-xs text-muted-foreground mb-4">হরাইজন্টাল রেশিও (300×80 বা 250×60 px)। ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড PNG বা SVG রিকমেন্ডেড।</p>
-            <div className="flex items-center gap-4">
-              {logoUrl ? (
-                <div className="relative group">
-                  <img src={logoUrl} alt="Logo" className="h-16 w-auto object-contain border rounded-lg p-1" />
-                  <button
-                    onClick={() => { setLogoUrl(""); updateMutation.mutate({ key: "site_logo", value: { url: "" } }); }}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {logoUrl ? (
+                  <div className="flex items-center gap-3">
+                    {/* Checkerboard transparency container */}
+                    <div className="relative group rounded-lg overflow-hidden border p-1.5 bg-[repeating-conic-gradient(#cbd5e1_0%_25%,#f8fafc_0%_50%)] bg-[length:16px_16px]">
+                      <div className={`rounded px-3 py-2 flex items-center justify-center min-w-[140px] min-h-[56px] transition-colors ${logoPreviewDark ? "bg-slate-900" : "bg-white"}`}>
+                        <img
+                          src={logoUrl}
+                          alt="Logo"
+                          className="h-12 w-auto max-w-[200px] object-contain"
+                          style={(!logoPreviewDark && invertOnWhite) ? { filter: "brightness(0)" } : undefined}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoUrl("");
+                          updateMutation.mutate({ key: "site_logo", value: { url: "", invert_on_white: false } });
+                        }}
+                        className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-1 opacity-90 hover:opacity-100 transition-opacity shadow"
+                        title="লোগো ডিলিট করুন"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setLogoPreviewDark(!logoPreviewDark)}
+                      className="text-xs px-2.5 py-1.5 rounded-md border bg-background hover:bg-muted text-foreground flex items-center gap-1 shrink-0"
+                    >
+                      {logoPreviewDark ? "☀️ লাইট ভিউ" : "🌙 ডার্ক ভিউ"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-16 w-16 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground shrink-0">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <label className="cursor-pointer">
+                    <Button variant="outline" size="sm" asChild disabled={logoUploading}>
+                      <span>
+                        {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "লোগো আপলোড করুন (300×80 px)"}
+                      </span>
+                    </Button>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
                 </div>
-              ) : (
-                <div className="h-16 w-16 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-                  <Upload className="h-5 w-5" />
+              </div>
+
+              {logoUrl && (
+                <div className="pt-2.5 border-t mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-foreground font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={invertOnWhite}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setInvertOnWhite(checked);
+                        updateMutation.mutate({ key: "site_logo", value: { url: logoUrl, invert_on_white: checked } });
+                      }}
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>সাদা (White) লোগোকে সাদা হেডারে দৃশ্যমান করতে ডার্ক (কালো) করুন</span>
+                  </label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 ml-6">
+                    লোগো ফাইলটি যদি সাদা টেক্সটের হয়, তবে সাদা হেডারে এটি স্পষ্ট দেখাতে এই অপশনটি চালু রাখুন।
+                  </p>
                 </div>
               )}
-              <div className="flex-1">
-                <label className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild disabled={logoUploading}>
-                    <span>
-                      {logoUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...</> : "লোগো আপলোড করুন (300×80 px)"}
-                    </span>
-                  </Button>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]); e.target.value = ""; }} />
-                </label>
-                <p className="text-xs text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
-              </div>
             </div>
           </div>
 

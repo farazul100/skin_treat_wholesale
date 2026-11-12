@@ -20,14 +20,17 @@ const Header = () => {
   const { totalItems } = useCart();
   const { user } = useAuth();
 
-  const { data: logoUrl } = useQuery({
+  const { data: logoData } = useQuery({
     queryKey: ["site-logo"],
     queryFn: async () => {
       const { data } = await supabase.rpc("get_public_setting", { _key: "site_logo" });
-      return (data as any)?.url || "";
+      return data;
     },
     staleTime: 1000 * 60 * 10,
   });
+
+  const logoUrl = typeof logoData === "object" ? (logoData?.url || "") : (logoData || "");
+  const invertOnWhite = typeof logoData === "object" ? Boolean(logoData?.invert_on_white) : false;
 
   // Categories ordered by created_at ascending (oldest/first created first)
   const { data: categories } = useQuery({
@@ -43,9 +46,9 @@ const Header = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Active products query for category hover dropdown
+  // Active products query for category hover dropdown (shares key to deduplicate requests)
   const { data: allProducts } = useQuery({
-    queryKey: ["header-category-products"],
+    queryKey: ["storefront-products"],
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
@@ -127,6 +130,7 @@ const Header = () => {
                   src={logoUrl}
                   alt="Logo"
                   className="h-8 sm:h-9 max-h-10 w-auto max-w-[160px] sm:max-w-[200px] object-contain"
+                  style={invertOnWhite ? { filter: "brightness(0)" } : undefined}
                 />
               )}
             </Link>
@@ -151,6 +155,7 @@ const Header = () => {
                 src={logoUrl}
                 alt="Logo"
                 className="h-10 md:h-11 lg:h-13 max-h-14 w-auto max-w-[180px] md:max-w-[210px] lg:max-w-[250px] object-contain transition-all"
+                style={invertOnWhite ? { filter: "brightness(0)" } : undefined}
               />
             )}
           </Link>
