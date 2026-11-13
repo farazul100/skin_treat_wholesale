@@ -32,16 +32,18 @@ const Footer = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: logoUrl } = useQuery({
+  const { data: logoData } = useQuery({
     queryKey: ["site-logo"],
     queryFn: async () => {
       const { data } = await supabase.rpc("get_public_setting", { _key: "site_logo" });
-      if (!data) return "";
-      if (typeof data === "string") return data;
-      return (data as any)?.url || "";
+      return data;
     },
     staleTime: 1000 * 60 * 10,
   });
+
+  const rawLogoUrl = typeof logoData === "object" ? (logoData?.url || "") : (typeof logoData === "string" ? logoData : "");
+  const logoUrl = (typeof rawLogoUrl === "string" && !rawLogoUrl.startsWith("[object") && rawLogoUrl.trim() !== "") ? rawLogoUrl.trim() : "";
+  const invertOnWhite = typeof logoData === "object" ? Boolean(logoData?.invert_on_white) : false;
 
   const { data: socialMedia } = useQuery({
     queryKey: ["social-media"],
@@ -66,14 +68,17 @@ const Footer = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              {logoUrl && (
+              {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt="Logo"
-                  className="h-8 w-auto object-contain transition-all"
-                  style={{ filter: "brightness(0) invert(var(--footer-invert, 1))" }}
+                  className="h-8 md:h-10 w-auto max-w-[180px] sm:max-w-[220px] object-contain transition-all"
+                  style={invertOnWhite ? { filter: "brightness(0) invert(var(--footer-invert, 1))" } : undefined}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = "none";
+                  }}
                 />
-              )}
+              ) : null}
             </div>
             <p className="opacity-80 text-sm leading-relaxed mb-4">{f.brand_description}</p>
             {/* Social Media Icons */}
