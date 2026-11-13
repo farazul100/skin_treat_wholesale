@@ -6,6 +6,10 @@
     "url": "",
     "invert_on_white": false
   },
+  "footer_logo": {
+    "url": "",
+    "force_white": false
+  },
   "site_favicon": {
     "url": "/placeholder.svg"
   },

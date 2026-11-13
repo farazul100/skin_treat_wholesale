@@ -132,6 +132,184 @@ const SocialShareBannerUpload = ({ settings, updateMutation }: { settings: any; 
   );
 };
 
+const FooterLogoUpload = ({ settings, updateMutation }: { settings: any; updateMutation: any }) => {
+  const [footerLogoUrl, setFooterLogoUrl] = useState("");
+  const [forceWhite, setForceWhite] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewBgDark, setPreviewBgDark] = useState(true);
+
+  const mainLogoSetting = settings?.site_logo?.value;
+  const mainLogoUrl = typeof mainLogoSetting === "object"
+    ? mainLogoSetting?.url || ""
+    : (typeof mainLogoSetting === "string" ? mainLogoSetting : "");
+
+  const currentFooterColor = settings?.theme_color?.value?.footer_hex || settings?.theme_color?.value?.primary_hex || "#1f7a2e";
+
+  useEffect(() => {
+    const val = settings?.footer_logo?.value;
+    if (typeof val === "object") {
+      setFooterLogoUrl(val?.url || "");
+      setForceWhite(Boolean(val?.force_white));
+    } else if (typeof val === "string") {
+      setFooterLogoUrl(val || "");
+    }
+  }, [settings]);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const result = await res.json();
+      const url = result.secure_url;
+      setFooterLogoUrl(url);
+      updateMutation.mutate({ key: "footer_logo", value: { url, force_white: forceWhite } });
+      toast.success("ফুটার লোগো আপলোড সফল হয়েছে");
+    } catch {
+      toast.error("ফুটার লোগো আপলোড ব্যর্থ");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleToggleForceWhite = (checked: boolean) => {
+    setForceWhite(checked);
+    updateMutation.mutate({
+      key: "footer_logo",
+      value: { url: footerLogoUrl, force_white: checked },
+    });
+  };
+
+  const handleDelete = () => {
+    setFooterLogoUrl("");
+    updateMutation.mutate({
+      key: "footer_logo",
+      value: { url: "", force_white: forceWhite },
+    });
+  };
+
+  const displayPreviewUrl = footerLogoUrl || mainLogoUrl;
+
+  return (
+    <div className="bg-card border rounded-xl p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-foreground">ফুটার লোগো (Footer Logo)</h3>
+          <span className="text-[11px] bg-secondary text-secondary-foreground font-semibold px-2 py-0.5 rounded-full">
+            ঐচ্ছিক
+          </span>
+        </div>
+        <span className="text-[11px] font-bold text-primary">সঠিক মাপ: 300×80 px</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        ফুটারের ব্যাকগ্রাউন্ড কালারের সাথে সামঞ্জস্য রেখে সাদা (White) বা বিপরীত রঙের লোগো দেখাতে চাইলে এখানে আপলোড করুন। খালি থাকলে মূল সাইট লোগোই প্রদর্শিত হবে।
+      </p>
+
+      <div className="space-y-4">
+        {displayPreviewUrl ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Live Footer Preview Box */}
+            <div className="relative group rounded-lg overflow-hidden border p-1 bg-[repeating-conic-gradient(#cbd5e1_0%_25%,#f8fafc_0%_50%)] bg-[length:14px_14px]">
+              <div
+                className="rounded px-3 py-2 flex items-center justify-center min-w-[140px] max-w-[220px] h-[56px] transition-colors"
+                style={{
+                  backgroundColor: previewBgDark ? currentFooterColor : "#ffffff",
+                }}
+              >
+                <img
+                  src={displayPreviewUrl}
+                  alt="Footer Logo Preview"
+                  className="h-10 w-auto max-w-[190px] object-contain transition-all"
+                  style={forceWhite ? { filter: "brightness(0) invert(1)" } : undefined}
+                />
+              </div>
+
+              {footerLogoUrl && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-1 opacity-90 hover:opacity-100 transition-opacity shadow"
+                  title="ফুটার লোগো ডিলিট করুন"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewBgDark(!previewBgDark)}
+                  className="text-xs h-8 px-2.5 gap-1 shrink-0"
+                >
+                  {previewBgDark ? "☀️ সাদা ব্যাকগ্রাউন্ডে প্রিভিউ" : "🎨 ফুটার ব্যাকগ্রাউন্ডে প্রিভিউ"}
+                </Button>
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                {footerLogoUrl ? "✅ কাস্টম ফুটার লোগো সক্রিয়" : "ℹ️ আলাদা ফুটার লোগো নেই (মূল সাইট লোগো প্রদর্শিত হচ্ছে)"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="h-14 w-14 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground shrink-0">
+            <Upload className="h-5 w-5" />
+          </div>
+        )}
+
+        <div className="pt-0.5">
+          <label className="cursor-pointer inline-flex">
+            <Button variant="outline" size="sm" asChild disabled={uploading} className="text-xs">
+              <span>
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> আপলোড হচ্ছে...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3.5 w-3.5 mr-1" /> {footerLogoUrl ? "ফুটার লোগো পরিবর্তন করুন" : "ফুটার লোগো আপলোড করুন"}
+                  </>
+                )}
+              </span>
+            </Button>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) upload(e.target.files[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <p className="text-[11px] text-muted-foreground mt-1">সঠিক রেজোলিউশন: 300×80 px (ট্রান্সপারেন্ট PNG বা SVG)।</p>
+        </div>
+
+        {/* Force white toggle */}
+        <div className="pt-3 border-t">
+          <label className="flex items-start gap-2.5 cursor-pointer text-xs text-foreground font-medium select-none">
+            <input
+              type="checkbox"
+              checked={forceWhite}
+              onChange={(e) => handleToggleForceWhite(e.target.checked)}
+              className="rounded border-input text-primary focus:ring-primary h-4 w-4 mt-0.5"
+            />
+            <div>
+              <span className="font-semibold text-primary">ফুটারে লোগো সম্পূর্ণ সাদা (White) প্রদর্শন করুন</span>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-normal leading-relaxed">
+                রঙিন বা ডার্ক ফুটার ব্যাকগ্রাউন্ডের সাথে লোগোর কালার যদি মিশে যায়, তবে এই অপশন অন রাখলে লোগো স্বয়ংক্রিয়ভাবে উজ্জ্বল সাদা কালারে নিখুঁত ও স্পষ্ট দেখাবে।
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ChangeAdminPassword = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -376,6 +554,7 @@ const SettingsPersistenceCard = () => {
       toast.success(result.message || "সকল সেটিংস সফলভাবে রিস্টোর ও সেভ হয়েছে!");
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
       queryClient.invalidateQueries({ queryKey: ["site-logo"] });
+      queryClient.invalidateQueries({ queryKey: ["footer-logo"] });
       queryClient.invalidateQueries({ queryKey: ["theme-color"] });
       queryClient.invalidateQueries({ queryKey: ["site-favicon"] });
       queryClient.invalidateQueries({ queryKey: ["site-title"] });
@@ -661,6 +840,7 @@ const AdminSettings = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
       queryClient.invalidateQueries({ queryKey: ["site-logo"] });
+      queryClient.invalidateQueries({ queryKey: ["footer-logo"] });
       queryClient.invalidateQueries({ queryKey: ["theme-color"] });
       queryClient.invalidateQueries({ queryKey: ["site-favicon"] });
       queryClient.invalidateQueries({ queryKey: ["site-title"] });
@@ -764,6 +944,9 @@ const AdminSettings = () => {
             </div>
           </div>
 
+          {/* Footer Logo */}
+          <FooterLogoUpload settings={settings} updateMutation={updateMutation} />
+
           {/* Favicon */}
           <FaviconUpload settings={settings} updateMutation={updateMutation} />
 
@@ -860,7 +1043,43 @@ const AdminSettings = () => {
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">ডিফল্টভাবে এটি থিম কালার অনুযায়ী অটোমেটিক আপডেট হবে, বা আপনি চাইলে আলাদা কালারও দিতে পারেন।</p>
+
+                {/* Quick Presets for Footer Background Color */}
+                <div className="mt-3">
+                  <span className="text-[11px] font-medium text-muted-foreground block mb-1.5">এক ক্লিকে ফুটার কালার প্রিসেট বেছে নিন:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: "ডার্ক স্লেট", hex: "#0f172a" },
+                      { label: "গাঢ় কালো", hex: "#111827" },
+                      { label: "গাঢ় সবুজ", hex: "#064e3b" },
+                      { label: "গাঢ় চকোলেট", hex: "#2b1911" },
+                      { label: "নেভি ব্লু", hex: "#0a192f" },
+                      { label: "অফ-হোয়াইট", hex: "#f8fafc" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.hex}
+                        type="button"
+                        onClick={() => {
+                          setFooterColor(preset.hex);
+                          setSyncFooterWithTheme(false);
+                          applyThemeColor(themeColor, preset.hex);
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-md border flex items-center gap-1.5 transition-all ${
+                          footerColor.toLowerCase() === preset.hex.toLowerCase()
+                            ? "border-primary bg-primary/10 font-bold"
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        <span className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ backgroundColor: preset.hex }} />
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  লোগো ও ফুটারের কালার এক হয়ে গেলে ফুটারকে ডার্ক স্লেট বা অন্য কালার দিয়ে সুন্দর কনট্রাস্ট তৈরি করতে পারেন, অথবা উপরের সেকশন থেকে আলাদা সাদা ফুটার লোগো ব্যবহার করতে পারেন।
+                </p>
               </div>
 
               <Button

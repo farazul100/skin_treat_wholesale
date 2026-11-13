@@ -41,9 +41,34 @@ const Footer = () => {
     staleTime: 1000 * 60 * 10,
   });
 
+  const { data: footerLogoData } = useQuery({
+    queryKey: ["footer-logo"],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_public_setting", { _key: "footer_logo" });
+      return data;
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
   const rawLogoUrl = typeof logoData === "object" ? (logoData?.url || "") : (typeof logoData === "string" ? logoData : "");
   const logoUrl = (typeof rawLogoUrl === "string" && !rawLogoUrl.startsWith("[object") && rawLogoUrl.trim() !== "") ? rawLogoUrl.trim() : "";
   const invertOnWhite = typeof logoData === "object" ? Boolean(logoData?.invert_on_white) : false;
+
+  const rawFooterLogoUrl = typeof footerLogoData === "object" ? (footerLogoData?.url || "") : (typeof footerLogoData === "string" ? footerLogoData : "");
+  const footerLogoUrl = (typeof rawFooterLogoUrl === "string" && !rawFooterLogoUrl.startsWith("[object") && rawFooterLogoUrl.trim() !== "") ? rawFooterLogoUrl.trim() : "";
+  const forceWhite = typeof footerLogoData === "object" ? Boolean(footerLogoData?.force_white) : false;
+
+  const displayLogoUrl = footerLogoUrl || logoUrl;
+
+  const getLogoStyle = () => {
+    if (forceWhite) {
+      return { filter: "brightness(0) invert(1)" };
+    }
+    if (!footerLogoUrl && invertOnWhite) {
+      return { filter: "brightness(0) invert(var(--footer-invert, 1))" };
+    }
+    return undefined;
+  };
 
   const { data: socialMedia } = useQuery({
     queryKey: ["social-media"],
@@ -68,12 +93,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              {logoUrl ? (
+              {displayLogoUrl ? (
                 <img
-                  src={logoUrl}
+                  src={displayLogoUrl}
                   alt="Logo"
                   className="h-8 md:h-10 w-auto max-w-[180px] sm:max-w-[220px] object-contain transition-all"
-                  style={invertOnWhite ? { filter: "brightness(0) invert(var(--footer-invert, 1))" } : undefined}
+                  style={getLogoStyle()}
                   onError={(e) => {
                     (e.currentTarget as HTMLElement).style.display = "none";
                   }}

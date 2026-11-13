@@ -1791,7 +1791,7 @@ app.use(async (req, res) => {
 
     try {
       const [settings] = await pool.query(
-        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_logo', 'site_description', 'og_banner', 'social_share_banner', 'hero_promo_banner')"
+        "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('site_title', 'site_logo', 'footer_logo', 'site_description', 'og_banner', 'social_share_banner', 'hero_promo_banner')"
       );
       if (settings && settings.length > 0) {
         settings.forEach(s => {
