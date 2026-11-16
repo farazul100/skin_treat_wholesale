@@ -298,7 +298,9 @@ const ProductDetail = () => {
                         <Gift className="h-3 w-3 sm:h-4 sm:w-4 text-white animate-bounce" />
                       </span>
                       <span className="font-extrabold text-[11px] sm:text-sm md:text-base tracking-tight truncate">
-                        {product.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!"}
+                        {product.gift_heading?.trim()
+                          ? product.gift_heading.trim()
+                          : (product.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!")}
                       </span>
                     </div>
                     <span className="bg-amber-400 text-amber-950 text-[9px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full uppercase tracking-wider shrink-0 shadow-xs flex items-center gap-1">

@@ -22,6 +22,7 @@ const emptyProduct = {
   landing_page_html: "",
   has_gift: false as boolean,
   gift_title: "",
+  gift_heading: "",
   gift_image: "",
   gift_price: 0 as number,
   gift_charge_enabled: false as boolean,
@@ -285,6 +286,7 @@ const AdminProducts = () => {
       landing_page_html: product.landing_page_html || "",
       has_gift: product.has_gift === true || product.has_gift === 1 || product.has_gift === "1",
       gift_title: product.gift_title || "",
+      gift_heading: product.gift_heading || "",
       gift_image: product.gift_image || "",
       gift_price: Number(product.gift_price || 0),
       gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
@@ -317,6 +319,7 @@ const AdminProducts = () => {
       landing_page_html: product.landing_page_html || "",
       has_gift: product.has_gift === true || product.has_gift === 1 || product.has_gift === "1",
       gift_title: product.gift_title || "",
+      gift_heading: product.gift_heading || "",
       gift_image: product.gift_image || "",
       gift_price: Number(product.gift_price || 0),
       gift_charge_enabled: product.gift_charge_enabled === true || product.gift_charge_enabled === 1 || product.gift_charge_enabled === "1",
@@ -842,6 +845,22 @@ const AdminProducts = () => {
 
                 {form.has_gift ? (
                   <div className="space-y-5 border rounded-xl p-5 bg-card shadow-xs animate-in fade-in-50">
+                    {/* Gift Offer Heading (Top Banner Strip Title) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="text-xs font-semibold block text-foreground">গিফট অফার হেডিং (ব্যানার টাইটেল)</Label>
+                        <span className="text-[11px] text-muted-foreground">ঐচ্ছিক (ব্যানার হেডিং পরিবর্তন করতে পারেন)</span>
+                      </div>
+                      <Input
+                        value={form.gift_heading || ""}
+                        onChange={(e) => setForm({ ...form, gift_heading: e.target.value })}
+                        placeholder={form.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!"}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        প্রোডাক্ট পেইজে গিফট বক্সের ওপরের রঙিন স্ট্রিপের টাইটেল। খালি রাখলে স্বয়ংক্রিয়ভাবে দেখাবে: &ldquo;{form.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!"}&rdquo;।
+                      </p>
+                    </div>
+
                     {/* Gift Title */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
@@ -959,10 +978,26 @@ const AdminProducts = () => {
 
                     {/* Live Preview Box */}
                     <div className="border border-dashed border-emerald-500/40 rounded-xl p-4 bg-emerald-500/5 mt-4">
-                      <p className="text-xs font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-emerald-800 mb-2.5 flex items-center gap-1.5">
                         <Gift className="h-3.5 w-3.5" /> গ্রাহক যেভাবে গিফট অফার দেখতে পাবেন (লাইভ প্রিভিউ):
                       </p>
-                      <div className="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-2xs">
+
+                      {/* Top Ribbon Strip */}
+                      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-3 py-2 rounded-t-lg flex items-center justify-between gap-2 shadow-xs">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Gift className="h-3.5 w-3.5 text-white shrink-0" />
+                          <span className="font-extrabold text-xs tracking-tight truncate">
+                            {form.gift_heading?.trim()
+                              ? form.gift_heading.trim()
+                              : (form.gift_charge_enabled ? "🎁 স্পেশাল গিফট অফার প্যাক" : "🎉 এক্সক্লুসিভ অফার: ১০০% ফ্রি গিফট!")}
+                          </span>
+                        </div>
+                        <span className="bg-amber-400 text-amber-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                          {form.gift_charge_enabled ? "LIMITED PACK" : "FREE GIFT"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white p-3 rounded-b-lg border-x border-b shadow-2xs">
                         <div className="w-14 h-14 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center p-1 shrink-0 overflow-hidden">
                           {form.gift_image ? (
                             <img src={form.gift_image} alt="" className="w-full h-full object-contain" />
