@@ -153,9 +153,10 @@ const FloatingContactWidget = ({ className = "" }: FloatingContactWidgetProps) =
           <div className="w-full h-full rounded-full overflow-hidden border-2 border-white bg-slate-100 flex items-center justify-center">
             {/* Friendly Customer Support Headset Image */}
             <img
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=140&auto=format&fit=crop&q=80"
+              src="/customer-support.jpg"
               alt="Customer Support"
               className="w-full h-full object-cover"
+              style={{ objectPosition: "32% 20%" }}
               onError={(e) => {
                 // Fallback to nice SVG icon if image blocked
                 (e.target as HTMLElement).style.display = "none";
