@@ -63,13 +63,11 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
   const circumference = 2 * Math.PI * radius; // ~147.65px
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
+  if (!visible) return null;
+
   return (
     <div
-      className={`relative transition-all duration-300 ease-out select-none ${
-        visible
-          ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
-          : "opacity-0 scale-75 translate-y-4 pointer-events-none"
-      } ${className}`}
+      className={`relative select-none animate-in fade-in zoom-in-75 duration-200 ${className}`}
     >
       <button
         type="button"
@@ -80,7 +78,7 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
       >
         {/* SVG Circular Progress Track & Progress Indicator */}
         <svg
-          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none overflow-visible"
+          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
           viewBox="0 0 52 52"
         >
           {/* Faint Background Track Ring */}

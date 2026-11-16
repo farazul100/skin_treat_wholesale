@@ -95,9 +95,13 @@
     @apply border-border;
   }
 
-  body {
-    overflow-x: clip;
+  html,
+  body,
+  #root {
+    overflow-x: hidden;
     max-width: 100%;
+    width: 100%;
+    position: relative;
   }
 
   body {

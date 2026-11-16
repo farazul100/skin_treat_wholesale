@@ -14,7 +14,7 @@ const FloatingCartWidget = ({ className = "" }: FloatingCartWidgetProps) => {
     <aside
       aria-label="Floating Shopping Cart"
       onClick={openCart}
-      className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 cursor-pointer select-none group transition-all duration-300 hover:-translate-x-1 active:scale-95 ${className}`}
+      className={`hidden md:block fixed right-0 top-1/2 -translate-y-1/2 z-40 cursor-pointer select-none group transition-all duration-300 hover:-translate-x-1 active:scale-95 ${className}`}
       title="শপিং কার্ট খুলুন"
     >
       <div className="flex flex-col rounded-l-2xl overflow-hidden shadow-[0_8px_25px_rgba(0,0,0,0.18)] border-l-2 border-t-2 border-b-2 border-primary/20 backdrop-blur-xs">

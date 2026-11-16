@@ -129,10 +129,10 @@ const ProductDetail = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
       <TopBar />
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         <div className="container mx-auto px-4 py-4 lg:py-6">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-4">
             <ArrowLeft className="h-4 w-4" /> হোমপেজে ফিরে যান
@@ -237,7 +237,7 @@ const ProductDetail = () => {
 
                   {/* Mobile Horizontal Thumbnails (Only visible on mobile/tablet, preserving phone UX) */}
                   {images.length > 1 && (
-                    <div className="flex lg:hidden gap-2 overflow-x-auto pb-1 mt-3">
+                    <div className="flex lg:hidden gap-2 overflow-x-auto pb-1 mt-3 pr-16 no-scrollbar">
                       {images.map((img: string, i: number) => (
                         <button
                           key={i}
@@ -381,35 +381,36 @@ const ProductDetail = () => {
 
               {/* Action Buttons (Row 1: Quantity + Add to Cart | Row 2: ORDER NOW) */}
               <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* Quantity selector */}
-                  <div className="flex items-center border border-border/80 rounded-lg bg-secondary/30 p-0.5">
+                  <div className="flex items-center border border-border/80 rounded-lg bg-secondary/30 p-0.5 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 text-foreground hover:bg-background rounded-md"
+                      className="h-9 w-9 sm:h-10 sm:w-10 text-foreground hover:bg-background rounded-md"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
-                    <span className="w-10 text-center font-bold text-base text-foreground">{quantity}</span>
+                    <span className="w-8 sm:w-10 text-center font-bold text-sm sm:text-base text-foreground">{quantity}</span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 text-foreground hover:bg-background rounded-md"
+                      className="h-9 w-9 sm:h-10 sm:w-10 text-foreground hover:bg-background rounded-md"
                       onClick={() => setQuantity(quantity + 1)}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
 
                   {/* Add to Cart button */}
                   <Button
                     size="lg"
-                    className="flex-1 h-11 text-base font-semibold gap-2 shadow-xs"
+                    className="flex-1 h-10 sm:h-11 px-3 sm:px-6 text-sm sm:text-base font-semibold gap-1.5 sm:gap-2 shadow-xs truncate"
                     onClick={handleAddToCart}
                   >
-                    <ShoppingCart className="h-5 w-5" /> Add to Cart (কার্টে যোগ)
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate">Add to Cart (কার্টে যোগ)</span>
                   </Button>
                 </div>
 
