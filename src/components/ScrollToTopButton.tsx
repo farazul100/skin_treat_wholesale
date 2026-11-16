@@ -59,8 +59,8 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
   };
 
   // SVG circular geometry
-  const radius = 21.5;
-  const circumference = 2 * Math.PI * radius; // ~135.09px
+  const radius = 23.5;
+  const circumference = 2 * Math.PI * radius; // ~147.65px
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
@@ -76,30 +76,30 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
         onClick={scrollToTop}
         aria-label="Scroll to top"
         title={`উপরে যান (${Math.round(progress)}%)`}
-        className="group relative w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-transform duration-300 hover:scale-110 active:scale-95"
+        className="group relative w-12 h-12 md:w-[52px] md:h-[52px] flex items-center justify-center rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-transform duration-300 hover:scale-110 active:scale-95"
       >
         {/* SVG Circular Progress Track & Progress Indicator */}
         <svg
-          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
-          viewBox="0 0 48 48"
+          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none overflow-visible"
+          viewBox="0 0 52 52"
         >
           {/* Faint Background Track Ring */}
           <circle
-            cx="24"
-            cy="24"
+            cx="26"
+            cy="26"
             r={radius}
             className="stroke-primary/20 dark:stroke-primary/30"
-            strokeWidth="2.5"
+            strokeWidth="3"
             fill="transparent"
           />
 
           {/* Animated Scroll Progress Arc */}
           <circle
-            cx="24"
-            cy="24"
+            cx="26"
+            cy="26"
             r={radius}
             className="stroke-primary transition-[stroke-dashoffset] duration-150 ease-out"
-            strokeWidth="2.5"
+            strokeWidth="3"
             strokeLinecap="round"
             fill="transparent"
             strokeDasharray={circumference}
@@ -108,8 +108,8 @@ const ScrollToTopButton = ({ className = "" }: ScrollToTopButtonProps) => {
         </svg>
 
         {/* Inner Solid Circular Core Button */}
-        <div className="w-[33px] h-[33px] md:w-[36px] md:h-[36px] rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md shadow-primary/25 border border-white/70 dark:border-white/20 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/40">
-          <ChevronUp className="h-5 w-5 stroke-[2.8] transition-transform duration-300 group-hover:-translate-y-0.5" />
+        <div className="w-[38px] h-[38px] md:w-[42px] md:h-[42px] rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md shadow-primary/25 border border-white/70 dark:border-white/20 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/40">
+          <ChevronUp className="h-6 w-6 md:h-7 md:w-7 stroke-[3] transition-transform duration-300 group-hover:-translate-y-0.5" />
         </div>
       </button>
     </div>
