@@ -31,11 +31,18 @@ const OrderSuccess = () => {
   const { data: branding } = useQuery({
     queryKey: ["invoice-branding"],
     queryFn: async () => {
-      const [logoRes, footerRes] = await Promise.all([
+      const [logoRes, footerRes, titleRes] = await Promise.all([
         supabase.rpc("get_public_setting", { _key: "site_logo" }),
         supabase.rpc("get_public_setting", { _key: "footer_content" }),
+        supabase.rpc("get_public_setting", { _key: "site_title" }),
       ]);
+      const titleObj = titleRes.data as any;
+      const brandName = (typeof titleObj === "object" && titleObj?.title) 
+        ? titleObj.title 
+        : (typeof titleObj === "string" ? titleObj : "Sunnahly");
+
       return {
+        brandName: brandName && brandName !== "Natural Shefa" ? brandName : "Sunnahly",
         logoUrl: (logoRes.data as any)?.url || (typeof logoRes.data === "string" ? logoRes.data : ""),
         phone: (footerRes.data as any)?.phone || "",
         email: (footerRes.data as any)?.email || "",
@@ -169,6 +176,7 @@ const OrderSuccess = () => {
             <InvoicePDF
               order={order}
               logoUrl={branding?.logoUrl}
+              brandName={branding?.brandName || "Sunnahly"}
               brandPhone={branding?.phone}
               brandEmail={branding?.email}
               brandAddress={branding?.address}

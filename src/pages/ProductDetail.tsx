@@ -128,6 +128,26 @@ const ProductDetail = () => {
     toast.success(`${product.name} কার্টে যোগ হয়েছে`);
   };
 
+  const handleBuyNow = () => {
+    const finalImg = currentImage && currentImage !== "/placeholder.svg" ? currentImage : (images[0] || "/placeholder.svg");
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        originalPrice: product.original_price ? Number(product.original_price) : undefined,
+        image: finalImg,
+        has_gift: Boolean(product.has_gift),
+        gift_title: product.gift_title || "",
+        gift_image: product.gift_image || "",
+        gift_price: Number(product.gift_price || 0),
+        gift_charge_enabled: Boolean(product.gift_charge_enabled),
+      },
+      quantity,
+      false // Do not open cart drawer when proceeding to checkout
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
       <TopBar />
@@ -415,11 +435,10 @@ const ProductDetail = () => {
                 </div>
 
                 {/* ORDER NOW button (Full width) */}
-                <Link to="/checkout" className="block w-full">
+                <Link to="/checkout" className="block w-full" onClick={handleBuyNow}>
                   <Button
                     size="lg"
                     className="w-full h-12 text-base font-bold uppercase tracking-wider bg-[#0f172a] hover:bg-[#1e293b] text-white shadow-sm"
-                    onClick={handleAddToCart}
                   >
                     ORDER NOW
                   </Button>
@@ -547,7 +566,7 @@ const ProductDetail = () => {
                 <div className="relative z-10">
                   <h2 className="text-2xl md:text-4xl font-bold mb-4">আর দেরি কেন?</h2>
                   <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto">স্টক ফুরিয়ে যাওয়ার আগেই আপনার প্রয়োজনীয় পণ্যটি আজই অর্ডার করুন এবং উপভোগ করুন সেরা শপিং অভিজ্ঞতা।</p>
-                  <Link to="/checkout" onClick={handleAddToCart} className="inline-block bg-white text-primary font-bold text-lg px-10 py-4 rounded-full shadow-lg hover:bg-gray-50 transition-transform hover:scale-105">
+                  <Link to="/checkout" onClick={handleBuyNow} className="inline-block bg-white text-primary font-bold text-lg px-10 py-4 rounded-full shadow-lg hover:bg-gray-50 transition-transform hover:scale-105">
                     এখনই অর্ডার করুন
                   </Link>
                   <p className="mt-4 text-sm opacity-80 flex items-center justify-center gap-2">
@@ -570,7 +589,7 @@ const ProductDetail = () => {
           <span className="text-xs text-muted-foreground">সর্বমোট মূল্য</span>
           <span className="font-bold text-primary text-lg">৳{Number(product.price) * quantity}</span>
         </div>
-        <Link to="/checkout" className="flex-1" onClick={handleAddToCart}>
+        <Link to="/checkout" className="flex-1" onClick={handleBuyNow}>
           <Button size="lg" className="w-full font-bold h-12 rounded-full shadow-md animate-pulse-slow">
             অর্ডার করুন
           </Button>

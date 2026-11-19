@@ -21,7 +21,7 @@ const WhyUs = () => {
           <div className="rounded-xl border overflow-hidden">
             <div className="grid grid-cols-3 bg-primary text-primary-foreground font-semibold text-sm">
               <div className="p-4">বৈশিষ্ট্য</div>
-              <div className="p-4 text-center">Natural Shefa</div>
+              <div className="p-4 text-center">Sunnahly</div>
               <div className="p-4 text-center">অন্যরা</div>
             </div>
             {comparisons.map((item, i) => (

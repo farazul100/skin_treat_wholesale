@@ -7,7 +7,8 @@ interface InvoiceSlipProps {
   brandPhone?: string;
 }
 
-const InvoiceSlip = ({ order, logoUrl, brandName = "Natural Shefa", brandPhone }: InvoiceSlipProps) => {
+const InvoiceSlip = ({ order, logoUrl, brandName = "Sunnahly", brandPhone }: InvoiceSlipProps) => {
+  const cleanBrandName = brandName === "Natural Shefa" ? "Sunnahly" : (brandName || "Sunnahly");
   const items = order.order_items || [];
   const itemCount = items.reduce((s: number, i: any) => s + (i.quantity || 0), 0);
 
@@ -16,9 +17,9 @@ const InvoiceSlip = ({ order, logoUrl, brandName = "Natural Shefa", brandPhone }
       {/* Header bar with brand color */}
       <div className="slip-header">
         {logoUrl ? (
-          <img src={logoUrl} alt={brandName} className="slip-logo" crossOrigin="anonymous" />
+          <img src={logoUrl} alt={cleanBrandName} className="slip-logo" crossOrigin="anonymous" />
         ) : (
-          <span className="slip-brand">{brandName}</span>
+          <span className="slip-brand">{cleanBrandName}</span>
         )}
         <span className="slip-order-no">#{order.order_number}</span>
       </div>

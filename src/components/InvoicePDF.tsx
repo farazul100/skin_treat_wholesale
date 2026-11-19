@@ -16,11 +16,12 @@ interface InvoicePDFProps {
 const InvoicePDF = ({
   order,
   logoUrl,
-  brandName = "Natural Shefa",
+  brandName = "Sunnahly",
   brandPhone,
   brandAddress,
   brandEmail,
 }: InvoicePDFProps) => {
+  const cleanBrandName = brandName === "Natural Shefa" ? "Sunnahly" : (brandName || "Sunnahly");
   const items = order.order_items || [];
   const subtotal = Number(order.subtotal || 0);
   const delivery = Number(order.delivery_charge || 0);
@@ -63,36 +64,33 @@ const InvoicePDF = ({
           {logoUrl ? (
             <img
               src={logoUrl}
-              alt={brandName}
+              alt={cleanBrandName}
               crossOrigin="anonymous"
               style={{ height: "60px", width: "auto", objectFit: "contain" }}
             />
           ) : (
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                background: PRIMARY,
-                color: "#fff",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "26px",
-                fontWeight: 700,
-              }}
-            >
-              N
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  background: PRIMARY,
+                  color: "#fff",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "22px",
+                  fontWeight: 700,
+                }}
+              >
+                {(cleanBrandName || "S").charAt(0).toUpperCase()}
+              </div>
+              <div style={{ fontSize: "20px", fontWeight: 700, color: PRIMARY }}>
+                {cleanBrandName}
+              </div>
             </div>
           )}
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: 700, color: PRIMARY }}>
-              {brandName}
-            </div>
-            <div style={{ fontSize: "12px", color: MUTED }}>
-              প্রাকৃতিক সৌন্দর্যের ঠিকানা
-            </div>
-          </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div
@@ -445,8 +443,8 @@ const InvoicePDF = ({
           {brandAddress && <div>📍 {brandAddress}</div>}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 600 }}>{brandName}</div>
-          <div>www.naturalshefa.com</div>
+          <div style={{ fontWeight: 600 }}>{cleanBrandName}</div>
+          <div>{typeof window !== "undefined" ? window.location.host : "sunnahly.com"}</div>
         </div>
       </div>
     </div>

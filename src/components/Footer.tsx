@@ -17,9 +17,9 @@ const defaultFooter = {
     { label: "শিপিং পলিসি", href: "/page/shipping" },
   ],
   phone: "০১XXXXXXXXX",
-  email: "info@naturalshefa.com",
+  email: "info@sunnahly.com",
   address: "ঢাকা, বাংলাদেশ",
-  copyright: "© ২০২৬ Natural Shefa। সর্বস্বত্ব সংরক্ষিত।",
+  copyright: "© ২০২৬ Sunnahly। সর্বস্বত্ব সংরক্ষিত।",
 };
 
 const Footer = () => {

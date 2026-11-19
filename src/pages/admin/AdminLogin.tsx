@@ -29,7 +29,7 @@ const AdminLogin = () => {
         map[s.key || s.setting_key] = val;
       });
       return {
-        title: map.site_title?.title || "Natural Shefa",
+        title: map.site_title?.title || "Sunnahly",
         logo: map.site_logo?.url || ""
       };
     },
@@ -71,14 +71,14 @@ const AdminLogin = () => {
               <Shield className="h-7 w-7 text-primary-foreground" />
             </div>
           )}
-          <h1 className="text-2xl font-bold text-foreground">{storeInfo?.title || "Natural Shefa"}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{storeInfo?.title || "Sunnahly"}</h1>
           <p className="text-muted-foreground text-sm mt-1">অ্যাডমিন প্যানেল</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card border rounded-xl p-6 space-y-4">
           <div>
             <Label htmlFor="email">ইমেইল</Label>
-            <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@naturalshefa.com" required />
+            <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@sunnahly.com" required />
           </div>
           <div>
             <Label htmlFor="password">পাসওয়ার্ড</Label>

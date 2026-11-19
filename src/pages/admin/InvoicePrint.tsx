@@ -55,6 +55,8 @@ const InvoicePrint = () => {
 
   const logoUrl = settings?.site_logo?.url;
   const brandPhone = settings?.footer_content?.phone;
+  const rawBrandName = settings?.site_title?.title || settings?.site_title?.value?.title || "Sunnahly";
+  const brandName = rawBrandName === "Natural Shefa" ? "Sunnahly" : rawBrandName;
 
   // Auto-trigger print after render
   useEffect(() => {
@@ -313,6 +315,7 @@ const InvoicePrint = () => {
                   key={order.id}
                   order={order}
                   logoUrl={logoUrl}
+                  brandName={brandName}
                   brandPhone={brandPhone}
                 />
               ))}

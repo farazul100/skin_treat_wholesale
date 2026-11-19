@@ -45,7 +45,7 @@ const resolveItemImage = (img?: any) => {
 };
 
 const Checkout = () => {
-  const { items, totalPrice, clearCart, updateQuantity, removeItem, appliedCoupon, discountAmount, finalPrice } = useCart();
+  const { items, totalPrice, clearCart, updateQuantity, removeItem, appliedCoupon, discountAmount, finalPrice, closeCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,10 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const incompleteIdRef = useRef<string | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    closeCart();
+  }, [closeCart]);
 
   const [form, setForm] = useState({
     name: "",

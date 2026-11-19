@@ -1364,8 +1364,8 @@ const AdminProducts = () => {
                 <div className="border rounded-lg p-4 bg-background">
                   <h4 className="text-xs font-medium text-muted-foreground mb-3">গুগল প্রিভিউ</h4>
                   <div className="space-y-0.5">
-                    <p className="text-[#1a0dab] text-lg leading-tight">{form.meta_title || form.name || "পণ্যের নাম"} — Natural Shefa</p>
-                    <p className="text-[#006621] text-sm">naturalshefa.com/product/{form.slug || "product-slug"}</p>
+                    <p className="text-[#1a0dab] text-lg leading-tight">{form.meta_title || form.name || "পণ্যের নাম"} — Sunnahly</p>
+                    <p className="text-[#006621] text-sm">sunnahly.com/product/{form.slug || "product-slug"}</p>
                     <p className="text-sm text-[#545454] line-clamp-2">{form.meta_description || form.short_description || "পণ্যের বিবরণ..."}</p>
                   </div>
                 </div>

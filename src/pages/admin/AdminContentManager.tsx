@@ -52,9 +52,9 @@ const AdminContentManager = () => {
   // Footer
   const [fBrand, setFBrand] = useState("বাংলাদেশের সেরা প্রাকৃতিক ও অর্গানিক পণ্যের অনলাইন শপ।");
   const [fPhone, setFPhone] = useState("০১XXXXXXXXX");
-  const [fEmail, setFEmail] = useState("info@naturalshefa.com");
+  const [fEmail, setFEmail] = useState("info@sunnahly.com");
   const [fAddress, setFAddress] = useState("ঢাকা, বাংলাদেশ");
-  const [fCopyright, setFCopyright] = useState("© ২০২৬ Natural Shefa। সর্বস্বত্ব সংরক্ষিত।");
+  const [fCopyright, setFCopyright] = useState("© ২০২৬ Sunnahly। সর্বস্বত্ব সংরক্ষিত।");
 
   // Social media
   const [smFacebook, setSmFacebook] = useState("");

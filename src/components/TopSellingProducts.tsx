@@ -73,7 +73,7 @@ const TopSellingProducts = () => {
       gift_image: p.gift_image || "",
       gift_price: Number(p.gift_price || 0),
       gift_charge_enabled: Boolean(p.gift_charge_enabled),
-    });
+    }, 1, false);
     navigate("/checkout");
   };
 

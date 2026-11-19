@@ -61,7 +61,7 @@ const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categ
       gift_image,
       gift_price,
       gift_charge_enabled,
-    });
+    }, 1, true);
     toast.success(`${name} কার্টে যোগ হয়েছে`);
   };
 
@@ -79,7 +79,7 @@ const ProductCard = ({ id, name, price, originalPrice, image, badge, slug, categ
       gift_image,
       gift_price,
       gift_charge_enabled,
-    });
+    }, 1, false);
     navigate("/checkout");
   };
 

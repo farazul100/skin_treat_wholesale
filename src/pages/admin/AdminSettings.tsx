@@ -960,7 +960,7 @@ const AdminSettings = () => {
             <div className="space-y-3">
               <div>
                 <Label>স্টোর / ওয়েবসাইটের নাম</Label>
-                <Input placeholder="যেমন: Natural Shefa বা Sunnahly" value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="mt-1" />
+                <Input placeholder="যেমন: Sunnahly" value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="mt-1" />
               </div>
               <Button variant="outline" onClick={() => updateMutation.mutate({ key: "site_title", value: { title: siteTitle } })}>
                 সেভ করুন
