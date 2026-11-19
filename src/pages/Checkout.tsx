@@ -140,15 +140,18 @@ const Checkout = () => {
   let hasFullAdvanceRequirement = false;
   let hasDeliveryAdvanceRequirement = false;
   const restrictedProducts: string[] = [];
+  const productMethodsList: string[][] = [];
 
   if (cartProducts && cartProducts.length > 0) {
     cartProducts.forEach(p => {
       const raw = p.payment_requirement ? String(p.payment_requirement).trim() : "";
       const pMethods = raw ? raw.split(",").map((s: string) => s.trim()).filter(Boolean) : ["cod"];
-      
-      const allowsCOD = pMethods.includes("cod");
-      const allowsDelAdv = pMethods.includes("delivery_advance");
-      const allowsFull = pMethods.includes("full_advance");
+      const effectiveMethods = pMethods.length > 0 ? pMethods : ["cod"];
+      productMethodsList.push(effectiveMethods);
+
+      const allowsCOD = effectiveMethods.includes("cod");
+      const allowsDelAdv = effectiveMethods.includes("delivery_advance");
+      const allowsFull = effectiveMethods.includes("full_advance");
 
       // If this product does NOT allow COD:
       if (!allowsCOD) {
@@ -167,17 +170,37 @@ const Checkout = () => {
     });
   }
 
-  // Allowed methods based on strictest constraint:
+  // Allowed methods based strictly on the selected payment options of products:
   let allowedMethods: string[] = [];
-  if (canCOD) {
-    // All products in cart allow COD
-    allowedMethods = ["cod", "delivery_advance", "full_advance"];
-  } else if (hasFullAdvanceRequirement) {
-    // Strictest: At least one product strictly requires 100% advance payment
-    allowedMethods = ["full_advance"];
+
+  if (productMethodsList.length > 0) {
+    const allPossible = ["cod", "delivery_advance", "full_advance"];
+    // 1. Find common methods accepted by every product in the cart
+    let common = allPossible.filter(method =>
+      productMethodsList.every(methods => methods.includes(method))
+    );
+
+    // If COD is forbidden by any product, exclude COD
+    if (!canCOD) {
+      common = common.filter(m => m !== "cod");
+    }
+
+    if (common.length > 0) {
+      allowedMethods = common;
+    } else {
+      // Conflict resolution when cart items have non-overlapping options:
+      if (canCOD) {
+        allowedMethods = ["cod"];
+      } else if (hasFullAdvanceRequirement) {
+        allowedMethods = ["full_advance"];
+      } else {
+        const allowsAnyFull = productMethodsList.some(m => m.includes("full_advance"));
+        allowedMethods = allowsAnyFull ? ["delivery_advance", "full_advance"] : ["delivery_advance"];
+      }
+    }
   } else {
-    // At least one product requires delivery charge in advance
-    allowedMethods = ["delivery_advance", "full_advance"];
+    // Default while loading
+    allowedMethods = ["cod"];
   }
 
   const reqFull = !canCOD && hasFullAdvanceRequirement;
@@ -200,9 +223,14 @@ const Checkout = () => {
   const advanceTypeLabel = (paymentMethod === "full_advance" || reqFull) ? "সম্পূর্ণ মূল্য" : "ডেলিভারি চার্জ";
 
   useEffect(() => {
-    const valid = isPaymentEnabled ? [...allowedMethods, "eps"] : allowedMethods;
+    const showEPS = isPaymentEnabled && allowedMethods.includes("full_advance");
+    const valid = showEPS ? [...allowedMethods, "eps"] : allowedMethods;
     if (!valid.includes(paymentMethod)) {
-      setPaymentMethod(allowedMethods[0] || "cod");
+      if (showEPS && !allowedMethods.includes("cod") && !allowedMethods.includes("delivery_advance")) {
+        setPaymentMethod("eps");
+      } else {
+        setPaymentMethod(allowedMethods[0] || "cod");
+      }
     }
   }, [allowedMethods.join(","), paymentMethod, isPaymentEnabled]);
 
@@ -566,7 +594,7 @@ const Checkout = () => {
                       </div>
                     )}
 
-                    {isPaymentEnabled && (
+                    {isPaymentEnabled && allowedMethods.includes("full_advance") && (
                       <div className="flex items-center gap-3 border rounded-lg p-3.5 bg-primary/5 border-primary/25">
                         <RadioGroupItem value="eps" id="eps" />
                         <Label htmlFor="eps" className="cursor-pointer flex-1">
@@ -607,10 +635,10 @@ const Checkout = () => {
                       </div>
                     )}
 
-                    {allowedMethods.includes("full_advance") && (
+                    {!isPaymentEnabled && allowedMethods.includes("full_advance") && (
                       <div className={cn(
                         "flex items-center gap-3 border rounded-lg p-3 transition-colors",
-                        !isPaymentEnabled && "border-destructive/40 bg-destructive/5"
+                        "border-destructive/40 bg-destructive/5"
                       )}>
                         <RadioGroupItem value="full_advance" id="full_advance" />
                         <Label htmlFor="full_advance" className="cursor-pointer flex-1">
@@ -621,9 +649,7 @@ const Checkout = () => {
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground mt-0.5">
-                            {isPaymentEnabled 
-                              ? "বিকাশ, নগদ বা রকেটের মাধ্যমে সম্পূর্ণ টাকা পেমেন্ট করুন।" 
-                              : "⚠️ টাকা নেওয়ার কোনো অনলাইন পেমেন্ট মেথড বা গেটওয়ে সক্রিয় নেই।"}
+                            ⚠️ টাকা নেওয়ার কোনো অনলাইন পেমেন্ট মেথড বা গেটওয়ে সক্রিয় নেই।
                           </p>
                         </Label>
                       </div>

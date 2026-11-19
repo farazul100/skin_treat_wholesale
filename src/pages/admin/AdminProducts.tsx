@@ -203,7 +203,10 @@ const AdminProducts = () => {
       if (!safeCategoryId || safeCategoryId === "" || safeCategoryId === "null" || safeCategoryId === "undefined") {
         safeCategoryId = null;
       }
-      const payload = { ...data, slug, video_thumbnail, category_id: safeCategoryId };
+      const safePaymentRequirement = (data.payment_requirement && String(data.payment_requirement).trim())
+        ? String(data.payment_requirement).trim()
+        : "cod";
+      const payload = { ...data, slug, video_thumbnail, category_id: safeCategoryId, payment_requirement: safePaymentRequirement };
       if (editing) {
         const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
         if (error) throw error;
@@ -1197,9 +1200,14 @@ const AdminProducts = () => {
                     <div className="flex flex-col gap-2">
                       <label className="flex items-center gap-2 text-sm border p-3 rounded-lg cursor-pointer hover:bg-muted/50">
                         <input type="checkbox" checked={form.payment_requirement?.split(",").map(c => c.trim()).includes("cod")} onChange={() => {
-                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : [];
+                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : ["cod"];
                           if (current.includes("cod")) {
-                            setForm({ ...form, payment_requirement: current.filter(c => c !== "cod").join(",") });
+                            const updated = current.filter(c => c !== "cod");
+                            if (updated.length === 0) {
+                              toast.error("অন্তত একটি পেমেন্ট অপশন নির্বাচিত রাখতে হবে");
+                              return;
+                            }
+                            setForm({ ...form, payment_requirement: updated.join(",") });
                           } else {
                             setForm({ ...form, payment_requirement: [...current, "cod"].join(",") });
                           }
@@ -1208,9 +1216,14 @@ const AdminProducts = () => {
                       </label>
                       <label className="flex items-center gap-2 text-sm border p-3 rounded-lg cursor-pointer hover:bg-muted/50">
                         <input type="checkbox" checked={form.payment_requirement?.split(",").map(c => c.trim()).includes("delivery_advance")} onChange={() => {
-                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : [];
+                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : ["cod"];
                           if (current.includes("delivery_advance")) {
-                            setForm({ ...form, payment_requirement: current.filter(c => c !== "delivery_advance").join(",") });
+                            const updated = current.filter(c => c !== "delivery_advance");
+                            if (updated.length === 0) {
+                              toast.error("অন্তত একটি পেমেন্ট অপশন নির্বাচিত রাখতে হবে");
+                              return;
+                            }
+                            setForm({ ...form, payment_requirement: updated.join(",") });
                           } else {
                             setForm({ ...form, payment_requirement: [...current, "delivery_advance"].join(",") });
                           }
@@ -1219,9 +1232,14 @@ const AdminProducts = () => {
                       </label>
                       <label className="flex items-center gap-2 text-sm border p-3 rounded-lg cursor-pointer hover:bg-muted/50">
                         <input type="checkbox" checked={form.payment_requirement?.split(",").map(c => c.trim()).includes("full_advance")} onChange={() => {
-                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : [];
+                          const current = form.payment_requirement ? form.payment_requirement.split(",").map(c => c.trim()).filter(Boolean) : ["cod"];
                           if (current.includes("full_advance")) {
-                            setForm({ ...form, payment_requirement: current.filter(c => c !== "full_advance").join(",") });
+                            const updated = current.filter(c => c !== "full_advance");
+                            if (updated.length === 0) {
+                              toast.error("অন্তত একটি পেমেন্ট অপশন নির্বাচিত রাখতে হবে");
+                              return;
+                            }
+                            setForm({ ...form, payment_requirement: updated.join(",") });
                           } else {
                             setForm({ ...form, payment_requirement: [...current, "full_advance"].join(",") });
                           }
